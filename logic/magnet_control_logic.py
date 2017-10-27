@@ -195,14 +195,24 @@ class MagnetControlLogic(GenericLogic):
         return
 
     def get_current_position(self):
+        try:
+            self.curr_x_pos = float(self._magnetstage.get_current_position(1)[3:-2])
+        except pyvisa.errors.VisaIOError:
+            print('visa error')
+            time.sleep(0.05)
+            try:
+                self.curr_x_pos = float(self._magnetstage.get_current_position(1)[3:-2])
+            except pyvisa.errors.VisaIOError:
+                print('visa error')
+                time.sleep(0.05)
+                self.curr_x_pos = float(self._magnetstage.get_current_position(1)[3:-2])
 
-        self.curr_x_pos = float(self._magnetstage.get_current_position(1)[3:-2])
-        time.sleep(0.1)
+        time.sleep(0.05)
         try:
             self.curr_y_pos = float(self._magnetstage.get_current_position(2)[3:-2])
         except pyvisa.errors.VisaIOError:
             print('visa error')
-            time.sleep(0.1)
+            time.sleep(0.05)
             self.curr_y_pos = float(self._magnetstage.get_current_position(2)[3:-2])
         self.curr_z_pos = float(self._magnetstage.get_current_position(3)[3:-2])
 

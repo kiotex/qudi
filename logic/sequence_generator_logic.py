@@ -813,6 +813,8 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
             element_count = 0
         else:
             # Allocate huge sample arrays if chunkwise writing is disabled.
+            print('ana_channels', ana_channels)
+            print('number_of_samples', number_of_samples)
             analog_samples = np.empty([ana_channels, number_of_samples], dtype = 'float32')
             digital_samples = np.empty([dig_channels, number_of_samples], dtype = bool)
             # Starting index for the sample array entrys

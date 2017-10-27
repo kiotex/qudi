@@ -315,7 +315,6 @@ def _convolve_derive(self, data, std_dev):
 def _find_consecutive(self, data):
     return np.split(data, np.where(np.diff(data) != 1)[0]+1)
 
-
 def _find_consecutive_tolerance(self, data, tolerance):
     index_list = np.split(data, np.where(np.diff(data) >= tolerance)[0]+1)
     for i, index_group in enumerate(index_list):

@@ -68,10 +68,8 @@ class MicrowaveSMR(Base, MicrowaveInterface):
         try:
             # such a stupid stuff, the timeout is specified here in ms not in
             # seconds any more, take that into account.
-            self._gpib_connection = self.rm.open_resource(
-                                        self._gpib_address,
-                                        timeout=self._gpib_timeout*1000)
-
+            self._gpib_connection = self.rm.open_resource(self._gpib_address,
+                                                          timeout=self._gpib_timeout)
             self._gpib_connection.write_termination = "\r\n"
             self._gpib_connection.read_termination = None
 
@@ -180,7 +178,6 @@ class MicrowaveSMR(Base, MicrowaveInterface):
 
         @return str, bool: mode ['cw', 'list', 'sweep'], is_running [True, False]
         """
-
         is_running = bool(int(self._ask('OUTP:STAT?')))
         mode = self._ask(':FREQ:MODE?').strip().lower()
 
@@ -213,6 +210,21 @@ class MicrowaveSMR(Base, MicrowaveInterface):
         else:
             return float(self._ask(':POW?'))
 
+    def _set_power(self, power):
+        """ Sets the microwave output power.
+
+        @param float power: the power (in dBm) set for this device
+
+        @return float: actual power set (in dBm)
+        """
+
+        # every time a single power is set, the CW mode is activated!
+        self._write(':FREQ:MODE CW')
+        self._write('*WAI')
+        self._write(':POW {0:f};'.format(power))
+        actual_power = self.get_power()
+        return actual_power
+
     def get_frequency(self):
         """  Gets the frequency of the microwave output.
 
@@ -225,7 +237,6 @@ class MicrowaveSMR(Base, MicrowaveInterface):
 
         # THIS AMBIGUITY IN THE RETURN VALUE TYPE IS NOT GOOD AT ALL!!!
         # FIXME: Correct that as soon as possible in the interface!!!
-
         mode, is_running = self.get_status()
 
         if 'cw' in mode:
@@ -360,7 +371,6 @@ class MicrowaveSMR(Base, MicrowaveInterface):
                            'device.'.format(self._MAX_LIST_ENTRIES))
 
         else:
-
             self._write(':SOUR:LIST:MODE STEP')
 
             # It seems that we have to set a DWEL for the device, but it is not so

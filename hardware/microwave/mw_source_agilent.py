@@ -47,7 +47,6 @@ class MicrowaveAgilent(Base, MicrowaveInterface):
     _usb_address = ConfigOption('usb_address', missing='error')
     _usb_timeout = ConfigOption('usb_timeout', 100, missing='warn')
 
-
     def on_activate(self):
         """ Initialisation performed during activation of the module.
         """
@@ -114,7 +113,6 @@ class MicrowaveAgilent(Base, MicrowaveInterface):
         else:
             mode="cw"
         return mode, is_running
-
 
     def get_power(self):
         """ Gets the microwave output power.
@@ -228,7 +226,6 @@ class MicrowaveAgilent(Base, MicrowaveInterface):
             self.log.warning("Turning on of List mode does not work")
             return -1
 
-
     def set_list(self, freq=None, power=None):
         """ There is no list mode for agilent
         # Also the list is created by giving 'start_freq, step, stop_freq'
@@ -296,13 +293,12 @@ class MicrowaveAgilent(Base, MicrowaveInterface):
         mode, dummy = self.get_status()
         return actual_freq, actual_power, mode
 
-
-
     def reset_listpos(self):
         """ Reset of MW List Mode position to start from first given frequency
 
         @return int: error code (0:OK, -1:error)
         """
+
         try:
             self._usb_connection.write(':RFO:STAT OFF')
             self._usb_connection.write(':SWEep:RF:STATe OFF')
@@ -341,8 +337,6 @@ class MicrowaveAgilent(Base, MicrowaveInterface):
         except:
             self.log.error("Turning on of sweep mode did not work!")
             return -1
-
-
 
     def set_sweep(self, start, stop, step, power):
         """
@@ -437,6 +431,7 @@ class MicrowaveAgilent(Base, MicrowaveInterface):
 
 
     def set_ext_trigger(self, pol=TriggerEdge.FALLING):
+
         """ Set the external trigger for this device with proper polarization.
 
         @param str source: channel name, where external trigger is expected.
@@ -453,6 +448,7 @@ class MicrowaveAgilent(Base, MicrowaveInterface):
         else:
             return -1
         try:
+
             self._usb_connection.write(':SWE:PTRG:SLOP {0}'.format(edge))
             time.sleep(0.5)
             self._usb_connection.write(':SWE:STRG:SLOP {0}'.format(edge))
@@ -548,6 +544,3 @@ class MicrowaveAgilent(Base, MicrowaveInterface):
             time.sleep(0.2)
 
         return
-
-
-

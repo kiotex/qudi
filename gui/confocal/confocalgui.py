@@ -29,6 +29,8 @@ from core.module import Connector, ConfigOption, StatusVar
 from gui.guibase import GUIBase
 from gui.guiutils import ColorBar
 from gui.colordefs import ColorScaleInferno
+#from gui.colordefs import ColorScaleViridis
+from gui.colordefs import ColorScaleRainbow
 from gui.colordefs import QudiPalettePale as palette
 from gui.fitsettings import FitParametersWidget
 from qtpy import QtCore
@@ -154,7 +156,6 @@ class ConfocalMainWindow(QtWidgets.QMainWindow):
     def mouseDoubleClickEvent(self, event):
         self._doubleclicked = True
         self.sigDoubleClick.emit()
-
 
 class ConfocalSettingDialog(QtWidgets.QDialog):
 
@@ -454,11 +455,15 @@ class ConfocalGui(GUIBase):
         self._mw.y_SliderWidget.setRange(0, num_of_points_y)
         self._mw.z_SliderWidget.setRange(0, num_of_points_z)
 
+        self._mw.laserSlider.setRange(-10.0, 10.0)
+
         # Just to be sure, set also the possible maximal values for the spin
         # boxes of the current values:
         self._mw.x_current_InputWidget.setRange(self._scanning_logic.x_range[0], self._scanning_logic.x_range[1])
         self._mw.y_current_InputWidget.setRange(self._scanning_logic.y_range[0], self._scanning_logic.y_range[1])
         self._mw.z_current_InputWidget.setRange(self._scanning_logic.z_range[0], self._scanning_logic.z_range[1])
+
+        self._mw.laser_voltage.setRange(-10.0, 10.0)
 
         # set minimal steps for the current value
         self._mw.x_current_InputWidget.setOpts(minStep=1e-6)
@@ -504,6 +509,7 @@ class ConfocalGui(GUIBase):
         self._mw.x_current_InputWidget.editingFinished.connect(self.update_from_input_x)
         self._mw.y_current_InputWidget.editingFinished.connect(self.update_from_input_y)
         self._mw.z_current_InputWidget.editingFinished.connect(self.update_from_input_z)
+        self._mw.laser_voltage.editingFinished.connect(self.update_from_input_laser_power)
 
         self._mw.xy_res_InputWidget.editingFinished.connect(self.change_xy_resolution)
         self._mw.z_res_InputWidget.editingFinished.connect(self.change_z_resolution)
@@ -595,6 +601,7 @@ class ConfocalGui(GUIBase):
         self._mw.optimizer_only_view_Action.triggered.connect(self.small_optimizer_view)
         self._mw.actionAutoRange_xy.triggered.connect(self._mw.xy_ViewWidget.autoRange)
         self._mw.actionAutoRange_z.triggered.connect(self._mw.depth_ViewWidget.autoRange)
+
         # Connect the buttons and inputs for the xy colorbar
         self._mw.xy_cb_manual_RadioButton.clicked.connect(self.update_xy_cb_range)
         self._mw.xy_cb_centiles_RadioButton.clicked.connect(self.update_xy_cb_range)
@@ -660,8 +667,6 @@ class ConfocalGui(GUIBase):
         self._mw.depth_ViewWidget.sigMouseClick.connect(self.depth_scan_start_zoom_point)
         self._mw.depth_ViewWidget.sigMouseReleased.connect(self.depth_scan_end_zoom_point)
 
-
-
         ###################################################################
         #               Icons for the scan actions                        #
         ###################################################################
@@ -694,7 +699,8 @@ class ConfocalGui(GUIBase):
         #           Connect the colorbar and their actions              #
         #################################################################
         # Get the colorscale and set the LUTs
-        self.my_colors = ColorScaleInferno()
+        #self.my_colors = ColorScaleViridis()
+        self.my_colors = ColorScaleRainbow()
 
         self.xy_image.setLookupTable(self.my_colors.lut)
         self.depth_image.setLookupTable(self.my_colors.lut)
@@ -724,7 +730,7 @@ class ConfocalGui(GUIBase):
         self.update_crosshair_position_from_logic('init')
         self.adjust_xy_window()
         self.adjust_depth_window()
-
+        self._mw.laser_voltage.setValue(-7.8)
         self.show()
 
     def initSettingsUI(self):
@@ -1384,6 +1390,13 @@ class ConfocalGui(GUIBase):
         self._scanning_logic.set_position('zinput', z=z_pos)
         self._optimizer_logic.set_position('zinput', z=z_pos)
 
+    def update_from_input_laser_power(self):
+        """ The user changed the number in the z position spin box, adjust all
+           other GUI elements."""
+        power = self._mw.laser_voltage.value()
+        self.update_laserSlider()
+        self._scanning_logic.set_laser_power(power)
+
     def update_input_x(self, x_pos):
         """ Update the displayed x-value.
 
@@ -1465,6 +1478,13 @@ class ConfocalGui(GUIBase):
         @param float z_pos: z position in m
         """
         self._mw.z_SliderWidget.setValue((z_pos - self._scanning_logic.z_range[0]) / self.slider_res)
+
+    def update_laserSlider(self):
+        """ Update the laser power when a change happens.
+
+        @param float z_pos: z position in m
+        """
+        self._mw.laserSlider.setValue(self._scanning_logic.laser_power)
 
     def change_xy_resolution(self):
         """ Update the xy resolution in the logic according to the GUI.
@@ -1964,7 +1984,6 @@ class ConfocalGui(GUIBase):
         if self._mw._doubleclicked:
             event.ignore()
             return
-
         # catch the event if the zoom mode is activated and if the event is
         # coming from a left mouse button.
         if not (self._mw.action_zoom.isChecked() and (event.button() == QtCore.Qt.LeftButton)):
@@ -2000,10 +2019,7 @@ class ConfocalGui(GUIBase):
         # system of the ViewBox, which also includes the 2D graph:
         pos = viewbox.mapSceneToView(event.localPos())
         endpos = [pos.x(), pos.y()]
-
         initpos = self._current_xy_zoom_start
-
-
 
         # get the right corners from the zoom window:
         if initpos[0] > endpos[0]:
@@ -2073,7 +2089,6 @@ class ConfocalGui(GUIBase):
         for i in range(2):
             self.xy_image.getViewBox().setRange(xRange=(xMin, xMax), yRange=(yMin, yMax),
                 update=True)
-
     def activate_zoom_double_click(self):
         if self._mw.action_zoom.isChecked():
             self._mw.action_zoom.setChecked(False)
@@ -2110,7 +2125,6 @@ class ConfocalGui(GUIBase):
             self._mw._doubleclicked = False
             event.ignore()
             return
-
         # catch the event if the zoom mode is activated and if the event is
         # coming from a left mouse button.
         if not (self._mw.action_zoom.isChecked() and (event.button() == QtCore.Qt.LeftButton)):
@@ -2158,7 +2172,6 @@ class ConfocalGui(GUIBase):
         self.update_roi_depth()
 
         self._mw.action_zoom.setChecked(False)
-
 
     def reset_depth_imagerange(self):
         """ Reset the imagerange if autorange was pressed.

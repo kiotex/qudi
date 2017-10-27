@@ -108,7 +108,6 @@ def import_check():
                ('pyqtgraph','pyqtgraph', None),
                ('git','gitpython', None)]
 
-
     def check_package(pkg_name, repo_name, version, optional=False):
         """
         Checks if a package is installed and if so whether it is new enough.

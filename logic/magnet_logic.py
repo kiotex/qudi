@@ -331,7 +331,6 @@ class MagnetLogic(GenericLogic):
                                     param_dict = { 'x' : 23 }
         """
 
-
         self.sigMoveRel.emit(param_dict)
         # self._check_position_reached_loop(start_pos, end_pos)
         # self.sigPosChanged.emit(param_dict)
@@ -345,7 +344,6 @@ class MagnetLogic(GenericLogic):
                                  {'axis_label': <a-value>}.
                                  'axis_label' must correspond to a label given
                                  to one of the axis.
-                                 
         @return param dict: dictionary, which passes all the relevant
                                 parameters. E.g., for a movement of an axis
                                 labeled with 'x' by 23 the dict should have the

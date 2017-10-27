@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+<?xml version="1.0" encoding="UTF-8"?>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
@@ -14,7 +18,11 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
+<<<<<<< HEAD
     <item column="0" row="0">
+=======
+    <item row="0" column="0">
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
      <widget class="QTabWidget" name="tabWidget">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -30,7 +38,11 @@
         <string>GUI</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout">
+<<<<<<< HEAD
         <item column="0" row="1">
+=======
+        <item row="1" column="0">
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
          <widget class="QScrollArea" name="scrollArea">
           <property name="widgetResizable">
            <bool>true</bool>
@@ -54,7 +66,11 @@
         <string>Logic</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout">
+<<<<<<< HEAD
         <item column="0" row="0">
+=======
+        <item row="0" column="0">
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
          <widget class="QScrollArea" name="scrollArea">
           <property name="widgetResizable">
            <bool>true</bool>
@@ -78,7 +94,11 @@
         <string>Hardware</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout">
+<<<<<<< HEAD
         <item column="0" row="0">
+=======
+        <item row="0" column="0">
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
          <widget class="QScrollArea" name="scrollArea">
           <property name="widgetResizable">
            <bool>true</bool>
@@ -114,6 +134,7 @@
     <property name="title">
      <string>&amp;Menu</string>
     </property>
+<<<<<<< HEAD
     <addaction name="actionLoad_configuration" />
     <addaction name="actionReload_current_configuration" />
     <addaction name="actionSave_configuration" />
@@ -121,29 +142,53 @@
     <addaction name="action_Load_all_modules" />
     <addaction name="separator" />
     <addaction name="actionQuit" />
+=======
+    <addaction name="actionLoad_configuration"/>
+    <addaction name="actionReload_current_configuration"/>
+    <addaction name="actionSave_configuration"/>
+    <addaction name="separator"/>
+    <addaction name="action_Load_all_modules"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
      <string>Abo&amp;ut</string>
     </property>
+<<<<<<< HEAD
     <addaction name="actionAbout_Qudi" />
     <addaction name="actionAbout_Qt" />
+=======
+    <addaction name="actionAbout_Qudi"/>
+    <addaction name="actionAbout_Qt"/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
      <string>&amp;View</string>
     </property>
+<<<<<<< HEAD
     <addaction name="actionConfigurationView" />
     <addaction name="actionConsoleView" />
     <addaction name="actionLogView" />
     <addaction name="actionRemoteView" />
     <addaction name="actionThreadsView" />
     <addaction name="actionReset_to_default_layout" />
+=======
+    <addaction name="actionConfigurationView"/>
+    <addaction name="actionConsoleView"/>
+    <addaction name="actionLogView"/>
+    <addaction name="actionRemoteView"/>
+    <addaction name="actionThreadsView"/>
+    <addaction name="actionReset_to_default_layout"/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
      <string>Settings</string>
     </property>
+<<<<<<< HEAD
     <addaction name="actionConsoleSettings" />
    </widget>
    <addaction name="menuMenu" />
@@ -152,6 +197,16 @@
    <addaction name="menuAbout" />
   </widget>
   <widget class="QStatusBar" name="statusbar" />
+=======
+    <addaction name="actionConsoleSettings"/>
+   </widget>
+   <addaction name="menuMenu"/>
+   <addaction name="menuView"/>
+   <addaction name="menuSettings"/>
+   <addaction name="menuAbout"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
   <widget class="QDockWidget" name="configDisplayDockWidget">
    <property name="enabled">
     <bool>true</bool>
@@ -189,7 +244,11 @@
    <attribute name="dockWidgetArea">
     <number>2</number>
    </attribute>
+<<<<<<< HEAD
    <widget class="RichJupyterWidget" name="consolewidget" />
+=======
+   <widget class="RichJupyterWidget" name="consolewidget"/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
   </widget>
   <widget class="QDockWidget" name="logDockWidget">
    <property name="windowTitle">
@@ -198,7 +257,11 @@
    <attribute name="dockWidgetArea">
     <number>8</number>
    </attribute>
+<<<<<<< HEAD
    <widget class="LogWidget" name="logwidget" />
+=======
+   <widget class="LogWidget" name="logwidget"/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
   </widget>
   <widget class="QDockWidget" name="remoteDockWidget">
    <property name="windowTitle">
@@ -207,7 +270,11 @@
    <attribute name="dockWidgetArea">
     <number>8</number>
    </attribute>
+<<<<<<< HEAD
    <widget class="RemoteWidget" name="remoteWidget" />
+=======
+   <widget class="RemoteWidget" name="remoteWidget"/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
   </widget>
   <widget class="QDockWidget" name="threadDockWidget">
    <property name="windowTitle">
@@ -216,7 +283,11 @@
    <attribute name="dockWidgetArea">
     <number>8</number>
    </attribute>
+<<<<<<< HEAD
    <widget class="ThreadWidget" name="threadWidget" />
+=======
+   <widget class="ThreadWidget" name="threadWidget"/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
   </widget>
   <widget class="QToolBar" name="configToolBar">
    <property name="windowTitle">
@@ -228,9 +299,15 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+<<<<<<< HEAD
    <addaction name="actionLoad_configuration" />
    <addaction name="actionSave_configuration" />
    <addaction name="actionReload_current_configuration" />
+=======
+   <addaction name="actionLoad_configuration"/>
+   <addaction name="actionSave_configuration"/>
+   <addaction name="actionReload_current_configuration"/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
   </widget>
   <widget class="QToolBar" name="moduleToolBar">
    <property name="windowTitle">
@@ -242,7 +319,11 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+<<<<<<< HEAD
    <addaction name="action_Load_all_modules" />
+=======
+   <addaction name="action_Load_all_modules"/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
   </widget>
   <action name="actionLoad_configuration">
    <property name="icon">
@@ -265,7 +346,11 @@
   <action name="action_Load_all_modules">
    <property name="icon">
     <iconset theme="media-playback-start">
+<<<<<<< HEAD
      <normaloff />
+=======
+     <normaloff/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
     </iconset>
    </property>
    <property name="text">
@@ -275,7 +360,11 @@
   <action name="actionStart_all_modules">
    <property name="icon">
     <iconset theme="media-playback-start">
+<<<<<<< HEAD
      <normaloff />
+=======
+     <normaloff/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
     </iconset>
    </property>
    <property name="text">
@@ -291,7 +380,11 @@
     <string>&amp;Quit Qudi</string>
    </property>
    <property name="toolTip">
+<<<<<<< HEAD
     . Shortcut:Ctrl+Q<string>Quit Qudi suite. Shortcut:Ctrl+Q</string>
+=======
+    <string>Quit Qudi suite</string>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
@@ -306,7 +399,11 @@
    </property>
    <property name="icon">
     <iconset>
+<<<<<<< HEAD
      <normaloff />
+=======
+     <normaloff/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
     </iconset>
    </property>
    <property name="text">
@@ -364,7 +461,11 @@
   <action name="actionExport_log_as_HTML">
    <property name="icon">
     <iconset theme="document-save-as">
+<<<<<<< HEAD
      <normaloff />
+=======
+     <normaloff/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
     </iconset>
    </property>
    <property name="text">
@@ -432,7 +533,11 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+<<<<<<< HEAD
  <resources />
+=======
+ <resources/>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073
  <connections>
   <connection>
    <sender>actionConsoleView</sender>
@@ -515,4 +620,8 @@
    </hints>
   </connection>
  </connections>
+<<<<<<< HEAD
 </ui>
+=======
+</ui>
+>>>>>>> f993e6c738c93de6c1448530de27b28e5a4d2073

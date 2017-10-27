@@ -495,7 +495,6 @@ def estimate_sinewithoutoffset(self, x_axis, data, params):
     dft_y_red = dft_y[indicies]
 
     frequency_max = np.abs(dft_x_red[np.log(dft_y_red).argmax()])
-
     # find minimal distance to the next meas point in the corresponding time value>
     diff_array = np.ediff1d(x_axis)
     min_x_diff = diff_array.min()
@@ -743,7 +742,6 @@ def estimate_sineexponentialdecay(self, x_axis, data, params=None):
     ampl_val = max(np.abs(data_level.min()), np.abs(data_level.max()))
 
     dft_x, dft_y = compute_ft(x_axis, data_level, zeropad_num=1)
-
     stepsize = x_axis[1] - x_axis[0]  # for frequency axis
 
     frequency_max = np.abs(dft_x[dft_y.argmax()])
@@ -1154,6 +1152,7 @@ def estimate_sinedoublewithexpdecay(self, x_axis, data, params):
 
     #Problem with stderr: x.stderr will always be 0 for this model
 def make_sinedoublewithtwoexpdecay_fit(self, x_axis, data, estimator, units=None, add_params=None):
+
     """ Perform a two sine with two exponential decay and offset fit on the
         provided data.
 
@@ -1238,7 +1237,6 @@ def make_sinedoublewithtwoexpdecay_fit(self, x_axis, data, estimator, units=None
     result_str_dict['Offset'] = {'value': result.params['offset'].value,
                                  'value': result.params['offset'].stderr,
                                  'unit': units[1]}
-
     result.result_str_dict = result_str_dict
 
     return result

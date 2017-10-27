@@ -18,7 +18,6 @@ from .checkbox_delegate import CheckBoxDelegate
 import logging
 logger = logging.getLogger(__name__)
 
-
 class BlockEditor:
     """
     The QTableWidget has already an underlying model, where the data are saved.
@@ -225,6 +224,7 @@ class BlockEditor:
     def _get_headernames(self):
         """ Get the names of the current header.
 
+
         @return: dict with keys being the header names and items being the column number
         """
         headers = OrderedDict()
@@ -235,7 +235,6 @@ class BlockEditor:
 
     def set_displayed_analog_amplitude(self, ampl_dict):
         """ Update the maximal amplitudes of the current pulse block editor.
-
         @param dict ampl_dict:
         @return: list, with integers representing the column indices which have
                  changed
@@ -366,7 +365,6 @@ class BlockEditor:
 
     def get_column_delegate(self, column):
         """ Get the delegate object, which is responsible for the specific column
-
         @param int column: column index
 
         @return: QDelegate
@@ -497,7 +495,7 @@ class BlockOrganizer:
     def __init__(self, block_organizer_widget):
         self.bo_widget = block_organizer_widget
         self.parameter_dict = OrderedDict()
-        self.parameter_dict['repetitions'] = {'unit': '#', 'init_val': 0, 'min': 0,
+        self.parameter_dict['repetitions'] = {'unit': '#', 'init_val': 0, 'min': 1,
                                               'max': (2 ** 31 - 1), 'view_stepsize': 1, 'dec': 0,
                                               'type': int}
         self._cfg_param_pb = None

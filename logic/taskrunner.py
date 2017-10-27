@@ -22,11 +22,13 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 
 from qtpy import QtCore
 import importlib
-
+from core.module import StatusVar
 from core.util.models import ListTableModel
 from logic.generic_logic import GenericLogic
 import logic.generic_task as gt
 
+import schedule
+import time
 
 class TaskListTableModel(ListTableModel):
     """ An extension of the ListTableModel for keeping a task list in a TaskRunner.
@@ -93,6 +95,8 @@ class TaskRunner(GenericLogic):
 
     sigLoadTasks = QtCore.Signal()
     sigCheckTasks = QtCore.Signal()
+
+    refocus_time = StatusVar('refocus_time', 2)
 
     def on_activate(self):
         """ Initialise task runner.
@@ -268,6 +272,10 @@ class TaskRunner(GenericLogic):
         """
         task = self.model.storage[index.row()]
         self.startTask(task)
+        # schedule.every(self.refocus_time).minutes.do(lambda: self.startTask(task))
+        # while True:
+        #      schedule.run_pending()
+        #      time.sleep(1)
 
     def startTaskByName(self, taskname):
         """ Try starting a task identified by its configured name.
@@ -282,7 +290,7 @@ class TaskRunner(GenericLogic):
 
         @param dict task: dictionary that contains all information about task
         """
-        # print('runner', QtCore.QThread.currentThreadId())
+                # print('runner', QtCore.QThread.currentThreadId())
         if not task['ok']:
             self.log.error('Task {} did not pass all checks for required '
                     'tasks and modules and cannot be run'.format(

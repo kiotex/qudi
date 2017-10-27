@@ -103,25 +103,28 @@ class AcqSettings(ctypes.Structure):
     This object handles and retrieves the acquisition settings of the Fastcomtec.
     """
 
-    _fields_ = [('range',       ctypes.c_ulong),
-                ('prena',       ctypes.c_long),
+    _fields_ = [('range',       ctypes.c_ulong),    # length of acquired data, no_of_bins * cycles
+                ('prena',       ctypes.c_long),     # bit 0: realtime preset enabled; bit 1: single sweeps enabled; bit 2: sweep preset enabled; bit 3: ROI preset enabled; bit 4: start preset enabled    -> 2**4=16
                 ('cftfak',      ctypes.c_long),
-                ('roimin',      ctypes.c_ulong),
-                ('roimax',      ctypes.c_ulong),
-                ('eventpreset', ctypes.c_double),
-                ('timepreset',  ctypes.c_double),
+                ('roimin',      ctypes.c_ulong),    # range of interest min of recorded data
+                ('roimax',      ctypes.c_ulong),    # range of interest max of recorded data
+                ('eventpreset', ctypes.c_double),   # event preset of run time ???
+                ('timepreset',  ctypes.c_double),   # time preset of run time ???
                 ('savedata',    ctypes.c_long),
+                #('sequences',   ctypes.c_long),
                 ('fmt',         ctypes.c_long),
                 ('autoinc',     ctypes.c_long),
-                ('cycles',      ctypes.c_long),
-                ('sweepmode',   ctypes.c_long),
+                ('cycles',      ctypes.c_long),     # sequential cycles. number laser pulses
+                ('sweepmode',   ctypes.c_long),     # 0: normal; 4: sequential; bit 4: software start; bit 5: DMA mode; bit 6: wrap around; bit 7: start event generation; bit 8: enable tag bits   -> 4+2**7=132
                 ('syncout',     ctypes.c_long),
-                ('bitshift',    ctypes.c_long),
+                ('bitshift',    ctypes.c_long),     # bitshift / binwidth = b / 2**b,   (2**b)/4 ns
                 ('digval',      ctypes.c_long),
                 ('digio',       ctypes.c_long),
-                ('dac0',        ctypes.c_long),
-                ('dac1',        ctypes.c_long),
-                ('swpreset',    ctypes.c_double),
+                ('dac01',        ctypes.c_long),     # output DAC0
+                ('dac23',        ctypes.c_long),
+                #('dac01',       ctypes.c_long),
+                #('dac23',       ctypes.c_long),
+                ('swpreset',    ctypes.c_double),   # sweep preset value, maybe also start preset value
                 ('nregions',    ctypes.c_long),
                 ('caluse',      ctypes.c_long),
                 ('fstchan',     ctypes.c_double),
@@ -159,12 +162,12 @@ class FastComtec(Base, FastCounterInterface):
         # checking for the right configuration
         for key in config.keys():
             self.log.info('{0}: {1}'.format(key,config[key]))
-
-        self.GATED = False
+        self.GATED = True
         self.MINIMAL_BINWIDTH = 0.25e-9    # in seconds per bin
         #this variable has to be added because there is no difference
         #in the fastcomtec it can be on "stopped" or "halt"
         self.stopped_or_halt = "stopped"
+        self.setting = AcqSettings()
 
     def on_activate(self):
         """ Initialisation performed during activation of the module.
@@ -221,7 +224,7 @@ class FastComtec(Base, FastCounterInterface):
 
         return constraints
 
-    def configure(self, bin_width_s, record_length_s, number_of_gates = 0,sweep_reset=False, preset=None, cycles=None):
+    def configure(self, bin_width_s, record_length_s, number_of_gates = 0, sweep_reset=True, preset=1, cycles=50): #, sequences=None, start_preset_enabled=True):
         """ Configuration of the fast counter.
 
         @param float bin_width_s: Length of a single time bin in the time trace
@@ -236,14 +239,29 @@ class FastComtec(Base, FastCounterInterface):
                     gate_length_s: the actual set gate length in seconds
                     number_of_gates: the number of gated, which are accepted
         """
-
         binwidth_s = self.set_binwidth(bin_width_s)
         no_of_bins = record_length_s / binwidth_s
         if sweep_reset:
             self.load_setup('')
             self.set_length(no_of_bins, preset=preset, cycles=cycles)
+            self.prepare_data_array(sweep_reset=sweep_reset)
         else:
-            self.set_length(no_of_bins)
+            self.set_length(no_of_bins, preset=1, cycles=1)
+            self.prepare_data_array(sweep_reset=sweep_reset)
+
+        # if start_preset_enabled:
+        #     prena = 10
+        #     cmd = 'prena={0}'.format(prena)
+        #     self.dll.RunCmd(0, bytes(cmd, 'ascii'))
+        #
+        # if sequences==None:
+        #     sequences = 2 ** 31 - 1
+        #     cmd = 'sequences={0}'.format(sequences)
+        #     self.dll.RunCmd(0, bytes(cmd, 'ascii'))
+        # else:
+        #     cmd = 'sequences={0}'.format(sequences)
+        #     self.dll.RunCmd(0, bytes(cmd, 'ascii'))
+
         return (self.get_binwidth(), record_length_s, number_of_gates)
 
     def get_binwidth(self):
@@ -314,6 +332,23 @@ class FastComtec(Base, FastCounterInterface):
             time.sleep(0.05)
         return status
 
+    def prepare_data_array(self, sweep_reset=None):
+        """
+        prepares the ctypes data structure for exchange with the fastcomtec card
+        :return:
+        """
+        self.get_settings()
+        cycles = self.setting.cycles
+        range = self.setting.range
+        if sweep_reset:
+            self.data_array_ctypes = ((ctypes.c_uint32*int(range/cycles))*cycles)()
+            self.data_array = np.uint32(self.data_array_ctypes)
+            #self.data_array_exchange = np.int64(self.data_array)
+        else:
+            self.data_array_ctypes = (ctypes.c_uint32 * range)()
+            self.data_array = np.uint32(self.data_array_ctypes)
+        return None
+
     def get_data_trace(self, sweep_reset=None):
         """
         Polls the current timetrace data from the fast counter and returns it as a numpy array (dtype = int64).
@@ -325,23 +360,26 @@ class FastComtec(Base, FastCounterInterface):
           @return arrray: Time trace.
         """
 
-        setting = AcqSettings()
-        self.dll.GetSettingData(ctypes.byref(setting), 0)
-        N = setting.range
+        #setting = AcqSettings()
+        #self.dll.GetSettingData(ctypes.byref(self.setting), 0)
+        self.get_settings()
+        #N = self.setting.range
 
         """ SSR is an optional variable to setup the fastcomtec and allow single-shot readout.
         If this variable is selected, the data is an array of size 'range'.'cycles'. I.e. each
         measurement of length 'range' is repeated 'cycles' number of times.
         """
-        if sweep_reset:
-            H = setting.cycles
-            data = np.empty((H, N / H), dtype=np.uint32)
-        else:
-            data = np.empty((N,), dtype=np.uint32)
+        #if sweep_reset:
+        #    H = self.setting.cycles
+        #    #data = np.empty((H, N / H), dtype=np.uint32)
+        #    data =((ctypes.c_uint32*int(N/H))*H)()
+        #else:
+        #    #data = np.empty((N,), dtype=np.uint32)
+        #    data = (ctypes.c_uint32*N)()
 
-        self.dll.LVGetDat(data.ctypes.data, 0)
-        return np.int64(data)
-
+        #self.dll.LVGetDat(data.ctypes.data, 0)
+        self.dll.LVGetDat(self.data_array_ctypes, 0)
+        return np.int64(self.data_array)
 
     def get_data_testfile(self):
         ''' Load data test file '''
@@ -367,9 +405,10 @@ class FastComtec(Base, FastCounterInterface):
         @return int settings.bitshift: the red out bitshift
         """
 
-        settings = AcqSettings()
-        self.dll.GetSettingData(ctypes.byref(settings), 0)
-        return int(settings.bitshift)
+        # settings = AcqSettings()
+        self.get_settings()
+        #self.dll.GetSettingData(ctypes.byref(self.setting), 0)
+        return int(self.setting.bitshift)
 
     def set_bitshift(self, bitshift):
         """ Sets the bitshift properly for this card.
@@ -380,6 +419,7 @@ class FastComtec(Base, FastCounterInterface):
         """
 
         cmd = 'BITSHIFT={0}'.format(bitshift)
+
         self.dll.RunCmd(0, bytes(cmd, 'ascii'))
         return self.get_bitshift()
 
@@ -403,17 +443,28 @@ class FastComtec(Base, FastCounterInterface):
         @return float: settings class object
 
         """
-        setting = AcqSettings()
-        self.dll.GetSettingData(ctypes.byref(setting), 0)
-        return setting
+        #setting = AcqSettings()
+        self.dll.GetSettingData(ctypes.byref(self.setting), 0)
+        return self.setting
+
+    def set_settings(self):
+        """ set defined axis nanoseconds or bins
+        @return float: settings class object
+
+        """
+        #setting = AcqSettings()
+        #self.dll.GetSettingData(ctypes.byref(self.setting), 0)
+        self.dll.StoreSettingData(ctypes.byref(self.setting), 0)
+        self.dll.NewSetting(0)
+        return self.get_settings()
 
     #TODO: Check such that only possible lengths are set.
-    def set_length(self, N, preset=10000000, cycles=1):
+    def set_length(self, N, preset=1, cycles=50):
         """ Sets the length of the length of the actual measurement.
 
-        @param int N: Length of the measurement
+        @param int N: Length of the measurement (number of bins)
 
-        @return float: Red out length of measurement
+        @return float: Read out length of measurement
         """
 
         cmd = 'RANGE={0}'.format(int(N))
@@ -439,9 +490,10 @@ class FastComtec(Base, FastCounterInterface):
 
           @return int: length of the current measurement
         """
-        setting = AcqSettings()
-        self.dll.GetSettingData(ctypes.byref(setting), 0)
-        return int(setting.range)
+        #setting = AcqSettings()
+        #self.dll.GetSettingData(ctypes.byref(self.setting), 0)
+        self.get_settings()
+        return int(self.setting.range)
 
     # =========================================================================
     #   The following methods have to be carefully reviewed and integrated as
@@ -458,10 +510,11 @@ class FastComtec(Base, FastCounterInterface):
         return self.GetDelay()
 
     def GetDelay(self):
-        setting = AcqSettings()
-        self.dll.GetSettingData(ctypes.byref(setting), 0)
-        return setting.fstchan * 6.4
 
+        #setting = AcqSettings()
+        #self.dll.GetSettingData(ctypes.byref(setting), 0)
+        self.get_settings()
+        return self.setting.fstchan * 6.4
 
     #former SaveData_fast
     def SaveData_locally(self, filename, laser_index):
@@ -475,14 +528,16 @@ class FastComtec(Base, FastCounterInterface):
         fil.close()
 
     def SetLevel(self, start, stop):
-        setting = AcqSettings()
-        self.dll.GetSettingData(ctypes.byref(setting), 0)
+        #setting = AcqSettings()
+        #self.dll.GetSettingData(ctypes.byref(setting), 0)
+        self.get_settings()
         def FloatToWord(r):
             return int((r+2.048)/4.096*int('ffff',16))
-        setting.dac0 = ( setting.dac0 & int('ffff0000',16) ) | FloatToWord(start)
-        setting.dac1 = ( setting.dac1 & int('ffff0000',16) ) | FloatToWord(stop)
-        self.dll.StoreSettingData(ctypes.byref(setting), 0)
-        self.dll.NewSetting(0)
+        self.setting.dac0 = ( self.setting.dac0 & int('ffff0000',16) ) | FloatToWord(start)
+        self.setting.dac1 = ( self.setting.dac1 & int('ffff0000',16) ) | FloatToWord(stop)
+        #self.dll.StoreSettingData(ctypes.byref(self.setting), 0)
+        #self.dll.NewSetting(0)
+        self.set_settings()
         return self.GetLevel()
 
     def GetLevel(self):
@@ -502,7 +557,6 @@ class FastComtec(Base, FastCounterInterface):
         status = AcqStatus()
         self.dll.GetStatusData(ctypes.byref(status), 0)
         return status
-
 
     def load_setup(self, configname):
         cmd = 'loadcnf={0}'.format(configname)

@@ -50,15 +50,15 @@ class PulsedMeasurementLogic(GenericLogic):
     pulsegenerator = Connector(interface='PulserInterface')
 
     # status vars
-    fast_counter_record_length = StatusVar(default=3.e-6)
+    fast_counter_record_length = StatusVar(default=3.2e-6)
     sequence_length_s = StatusVar(default=100e-6)
     fast_counter_binwidth = StatusVar(default=1e-9)
-    microwave_power = StatusVar(default=-30.0)
+    microwave_power = StatusVar(default=-60.0)
     microwave_freq = StatusVar(default=2870e6)
-    use_ext_microwave = StatusVar(default=False)
+    use_ext_microwave = StatusVar(default=True)
     current_channel_config_name = StatusVar(default='')
-    sample_rate = StatusVar(default=25e9)
-    analogue_amplitude = StatusVar(default=dict())
+    sample_rate = StatusVar(default=1.2e9)
+    analogue_amplitude =  StatusVar(default=dict())
     interleave_on = StatusVar(default=False)
     timer_interval = StatusVar(default=5)
     alternating = StatusVar(default=False)
@@ -99,15 +99,16 @@ class PulsedMeasurementLogic(GenericLogic):
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
         # microwave parameters
-        self.use_ext_microwave = False
-        self.microwave_power = -30.     # dbm  (always in SI!)
-        self.microwave_freq = 2870e6    # Hz   (always in SI!)
+
+        self.use_ext_microwave = True
+        self.microwave_power = -50.     # dbm  (always in SI!)
+        self.microwave_freq = 1800e6    # Hz   (always in SI!)
 
         # fast counter status variables
         self.fast_counter_status = None     # 0=unconfigured, 1=idle, 2=running, 3=paused, -1=error
-        self.fast_counter_gated = None      # gated=True, ungated=False
+        self.fast_counter_gated = False      # gated=True, ungated=False
         self.fast_counter_binwidth = 1e-9   # in seconds
-        self.fast_counter_record_length = 3.e-6     # in seconds
+        self.fast_counter_record_length = 3.2e-6     # in seconds
 
         # parameters of the currently running sequence
         self.controlled_vals = np.array(range(50), dtype=float)
@@ -119,7 +120,8 @@ class PulsedMeasurementLogic(GenericLogic):
 
         # Pulse generator parameters
         self.current_channel_config_name = ''
-        self.sample_rate = 25e9
+        self.sample_rate = 1.2e+9
+
         self.analogue_amplitude = dict()
         self.interleave_on = False
 
@@ -211,6 +213,7 @@ class PulsedMeasurementLogic(GenericLogic):
         self.configure_fast_counter()
         self.fast_counter_off()
         self._pulse_analysis_logic.fast_counter_binwidth = self.fast_counter_binwidth
+
         # Check and configure external microwave
         if self.use_ext_microwave:
             self.microwave_on_off(False)
@@ -298,7 +301,9 @@ class PulsedMeasurementLogic(GenericLogic):
         else:
             number_of_gates = 0
 
-        actual_binwidth_s, actual_recordlength_s, actual_numofgates = self._fast_counter_device.configure(self.fast_counter_binwidth , self.fast_counter_record_length, number_of_gates)
+        cycles = self.number_of_lasers
+
+        actual_binwidth_s, actual_recordlength_s, actual_numofgates = self._fast_counter_device.configure(self.fast_counter_binwidth , self.fast_counter_record_length, number_of_gates, sweep_reset=True, preset=1, cycles = cycles)
         # use the actual parameters returned by the hardware
         self.fast_counter_binwidth = actual_binwidth_s
         self.fast_counter_record_length = actual_recordlength_s
@@ -322,7 +327,6 @@ class PulsedMeasurementLogic(GenericLogic):
         self.fast_counter_binwidth, self.fast_counter_record_length, num_of_gates = self.configure_fast_counter()
         # if self.fast_counter_gated:
         #    self.number_of_lasers = num_of_gates
-
         # Make sure the analysis logic takes the correct binning into account
         self._pulse_analysis_logic.fast_counter_binwidth = bin_width_s
 
@@ -422,8 +426,28 @@ class PulsedMeasurementLogic(GenericLogic):
     ############################################################################
     # Pulse generator control methods
     ############################################################################
+    def set_vpp(self, vpp):
+
+        a = self._pulse_generator_device.get_analog_level() # dictionary
+        if a[0]['a_ch1'] is not None:
+            a[0]['a_ch1']=vpp
+        else:
+            self.log.error('a_ch1 analogue channel is not specified')
+
+        if a[0]['a_ch2'] is not None:
+            a[0]['a_ch2']=vpp
+        else:
+            self.log.error('a_ch2 analogue channel is not specified')
+
+        self._pulse_generator_device.set_analog_level(a[0])
+
+        return
+
+
     def pulse_generator_on(self):
         """Switching on the pulse generator. """
+        self._pulse_generator_device.set_active_channels({'a_ch1': True})
+        time.sleep(0.5)
         err = self._pulse_generator_device.pulser_on()
         self.sigPulserRunningUpdated.emit(True)
         return err
@@ -431,6 +455,7 @@ class PulsedMeasurementLogic(GenericLogic):
     def pulse_generator_off(self):
         """Switching off the pulse generator. """
         err = self._pulse_generator_device.pulser_off()
+        self._pulse_generator_device.set_active_channels({'a_ch1': False}) # to swich on the laser
         self.sigPulserRunningUpdated.emit(False)
         return err
 
@@ -466,8 +491,8 @@ class PulsedMeasurementLogic(GenericLogic):
         # check and set sample rate
         samplerate_constr = pulser_constraints.sample_rate
         if sample_rate_Hz > samplerate_constr.max or sample_rate_Hz < samplerate_constr.min:
-            self.log.warning('Desired sample rate of {0:.0e} Hz not within pulse generator '
-                             'constraints. Setting {1:.0e} Hz instead.'
+            self.log.warning('Desired sample rate of {0:.00e} Hz not within pulse generator '
+                             'constraints. Setting {1:.00e} Hz instead.'
                              ''.format(sample_rate_Hz, samplerate_constr.max))
             sample_rate_Hz = samplerate_constr.max
         self.sample_rate = self._pulse_generator_device.set_sample_rate(sample_rate_Hz)
@@ -703,7 +728,9 @@ class PulsedMeasurementLogic(GenericLogic):
                     self.microwave_on_off(True)
 
                 # start fast counter
+                self.configure_fast_counter()
                 self.fast_counter_on()
+
                 # start pulse generator
                 self.pulse_generator_on()
 
@@ -807,9 +834,7 @@ class PulsedMeasurementLogic(GenericLogic):
 
         @param laser_index:
         @param show_raw_data:
-
         @return:
-
         """
         self.show_raw_data = show_raw_data
         self.show_laser_index = laser_index
@@ -826,7 +851,6 @@ class PulsedMeasurementLogic(GenericLogic):
                 self.laser_plot_y = self.laser_data[laser_index - 1]
             else:
                 self.laser_plot_y = np.sum(self.laser_data, 0)
-
 
         self.laser_plot_x = np.arange(1, len(self.laser_plot_y) + 1) * self.fast_counter_binwidth
 
@@ -994,7 +1018,7 @@ class PulsedMeasurementLogic(GenericLogic):
         return
 
     def save_measurement_data(self, controlled_val_unit='arb.u.', tag=None,
-                              with_error=True, save_ft=None):
+                              with_error=True, save_ft=False):
         """ Prepare data to be saved and create a proper plot of the data
 
         @param str controlled_val_unit: unit of the x axis of the plot
@@ -1015,7 +1039,6 @@ class PulsedMeasurementLogic(GenericLogic):
             filelabel = tag + '_laser_pulses'
         else:
             filelabel = 'laser_pulses'
-
         # prepare the data in a dict or in an OrderedDict:
         data = OrderedDict()
         laser_trace = self.laser_data.astype(int)
@@ -1271,7 +1294,6 @@ class PulsedMeasurementLogic(GenericLogic):
             psd=self.psd)
         return
 
-
     def do_fit(self, fit_method, x_data=None, y_data=None):
         """Performs the chosen fit on the measured data.
 
@@ -1281,7 +1303,6 @@ class PulsedMeasurementLogic(GenericLogic):
         @return float array pulsed_fit_y: Array containing the y-values of the fit
         @return dict fit_result: a dictionary containing the fit result
         """
-
         # Set current fit
         self.fc.set_current_fit(fit_method)
 

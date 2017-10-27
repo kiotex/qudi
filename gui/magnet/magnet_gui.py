@@ -1032,7 +1032,6 @@ class MagnetGui(GUIBase):
         #     self.update_pos()
             return param_dict
 
-
     def get_ref_curr_pos_ScienDSpinBox(self, label):
         """ Get the reference to the double spin box for the passed label. """
 

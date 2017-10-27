@@ -94,10 +94,10 @@ class MicrowaveSmiq(Base, MicrowaveInterface):
         limits.supported_modes = (MicrowaveMode.CW, MicrowaveMode.LIST, MicrowaveMode.SWEEP)
 
         limits.min_frequency = 300e3
-        limits.max_frequency = 6.4e9
+        limits.max_frequency = 3.3e9
 
         limits.min_power = -144
-        limits.max_power = 10
+        limits.max_power = 13
 
         limits.list_minstep = 0.1
         limits.list_maxstep = 6.4e9
@@ -277,6 +277,11 @@ class MicrowaveSmiq(Base, MicrowaveInterface):
         # This needs to be done due to stupid design of the list mode (sweep is better)
         self.cw_on()
         self._command_wait(':LIST:LEARN')
+        self._command_wait(':TRIG1:LIST:SOUR EXT')
+
+        self._command_wait(':TRIG1:SLOP NEG')
+        self._command_wait(':LIST:MODE STEP')
+        # self._command_wait(':TRIG:LIST:SOUR AUTO')
         self._command_wait(':FREQ:MODE LIST')
         dummy, is_running = self.get_status()
         while not is_running:

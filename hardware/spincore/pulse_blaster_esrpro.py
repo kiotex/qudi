@@ -109,9 +109,7 @@ class PulseBlasterESRPRO(Base, PulserInterface):
 
     def check(self, func_val):
         """ Check routine for the received error codes.
-
         @param int func_val: return error code of the called function.
-
         @return int: pass the error code further so that other functions have
                      the possibility to use it.
 
@@ -134,7 +132,6 @@ class PulseBlasterESRPRO(Base, PulserInterface):
         @return str: A string describing the last error is returned. A string
                      containing "No Error" is returned if the last function call
                      was successfull.
-
         Anytime a function (such as pb_init(), pb_start_programming(), etc.)
         encounters an error, this function will return a description of what
         went wrong.
@@ -145,6 +142,7 @@ class PulseBlasterESRPRO(Base, PulserInterface):
         # to an address where the received data is stored as characters
         # (8bit per char). Use the decode method to convert a char to a
         # string.
+
         return self._dll.pb_get_error().decode()
 
     def count_boards(self):
@@ -159,6 +157,7 @@ class PulseBlasterESRPRO(Base, PulserInterface):
         return self._dll.pb_count_boards()
 
     def select_board(self, board_num=0):
+
         """ Select the proper SpinCore card, if multiple are present.
 
         @param int board_num: Specifies which board to select. Counting starts
@@ -294,6 +293,7 @@ class PulseBlasterESRPRO(Base, PulserInterface):
         return self.check(self._dll.pb_stop_programming())
 
     def set_core_clock(self, clock_freq):
+
         """Tell the library what clock frequency the board uses.
 
         @param int clock_freq: Frequency of the clock in MHz.
@@ -366,9 +366,7 @@ class PulseBlasterESRPRO(Base, PulserInterface):
         """
 
         length = ctypes.c_double(length)
-
         self.check(self._dll.pb_inst_pbonly(flags, inst, inst_data, length))
-
 
     def get_status(self):
         """Read status from the board.
@@ -453,7 +451,6 @@ class PulseBlasterESRPRO(Base, PulserInterface):
             if num > 4094: # =(2**12 -2)
                 self.log.error('Error in PulseCreation: Command {0} exceeds '
                                'the maximal number of commands'.format(num))
-
         active_channels = sequence_list[-1]['active_channels']
 
         if loop == False:
@@ -614,3 +611,4 @@ class PulseBlasterESRPRO(Base, PulserInterface):
     # =========================================================================
     # Below the pulser interface implementation.
     # =========================================================================
+

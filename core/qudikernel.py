@@ -183,7 +183,7 @@ def install_kernel():
             logging.info('Installed kernelspec qudi in {}'.format(dest))
         except OSError as e:
             if e.errno == errno.EACCES:
-                print(e, file=sys.stderr)
+                print(e, file = sys.stderr)
                 sys.exit(1)
         finally:
             if os.path.isdir(tempdir):

@@ -31,7 +31,9 @@ from interface.slow_counter_interface import SlowCounterConstraints
 from interface.slow_counter_interface import CountingMode
 from interface.odmr_counter_interface import ODMRCounterInterface
 from interface.confocal_scanner_interface import ConfocalScannerInterface
-
+# import ctypes
+#
+# c_float64_p = ctypes.POINTER(ctypes.c_double)
 
 class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterInterface):
     """ stable: Kay Jahnke, Alexander Stark
@@ -161,6 +163,8 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
         self._counter_daq_tasks = []
         self._clock_daq_task = None
         self._scanner_clock_daq_task = None
+        self.LaserTask = None
+
         self._scanner_ao_task = None
         self._scanner_counter_daq_tasks = []
         self._line_length = None
@@ -176,28 +180,31 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
         self._counter_channels = []
         self._scanner_counter_channels = []
         self._photon_sources = []
+        self._laser_channel = []
 
         # handle all the parameters given by the config
         if 'scanner_x_ao' in config.keys():
             self._scanner_ao_channels.append(config['scanner_x_ao'])
             self._current_position.append(0)
-            self._position_range.append([0, 100e-6])
-            self._voltage_range.append([-10, 10])
+            self._position_range.append([0, 50e-6])
+            self._voltage_range.append([0, 10])
             if 'scanner_y_ao' in config.keys():
                 self._scanner_ao_channels.append(config['scanner_y_ao'])
                 self._current_position.append(0)
-                self._position_range.append([0, 100e-6])
-                self._voltage_range.append([-10, 10])
+                self._position_range.append([0, 50e-6])
+                self._voltage_range.append([0, 10])
                 if 'scanner_z_ao' in config.keys():
                     self._scanner_ao_channels.append(config['scanner_z_ao'])
                     self._current_position.append(0)
-                    self._position_range.append([0, 100e-6])
-                    self._voltage_range.append([-10, 10])
+                    self._position_range.append([-25e-6, 25e-6])
+                    self._voltage_range.append([0, 10])
                     if 'scanner_a_ao' in config.keys():
                         self._scanner_ao_channels.append(config['scanner_a_ao'])
                         self._current_position.append(0)
-                        self._position_range.append([0, 100e-6])
-                        self._voltage_range.append([-10, 10])
+                        self._position_range.append([0, 50e-6])
+                        self._voltage_range.append([0, 10])
+        if 'laser_ao' in config.keys():
+            self._laser_channel.append(config['laser_ao'])
 
         if len(self._scanner_ao_channels) < 1:
             self.log.error(
@@ -208,7 +215,7 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
 
         if 'photon_source' in config.keys():
             self._photon_sources.append(config['photon_source'])
-            n = 2
+            n = 1
             while 'photon_source{0}'.format(n) in config.keys():
                 self._photon_sources.append(config['photon_source{0}'.format(n)])
                 n += 1
@@ -219,7 +226,7 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
 
         if 'counter_channel' in config.keys():
             self._counter_channels.append(config['counter_channel'])
-            n = 2
+            n = 1
             while 'counter_channel{0}'.format(n) in config.keys():
                 self._counter_channels.append(config['counter_channel{0}'.format(n)])
                 n += 1
@@ -230,7 +237,7 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
 
         if 'scanner_counter_channel' in config.keys():
             self._scanner_counter_channels.append(config['scanner_counter_channel'])
-            n = 2
+            n = 1
             while 'scanner_counter_channel{0}'.format(n) in config.keys():
                 self._scanner_counter_channels.append(
                     config['scanner_counter_channel{0}'.format(n)])
@@ -477,7 +484,7 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
                 0,
                 # pulse frequency, divide by 2 such that length of semi period = count_interval
                 my_clock_frequency / 2,
-                # duty cycle of pulses, 0.5 such that high and low duration are both
+                # duty cycle of pulses, 0.8 such that high and low duration are both
                 # equal to count_interval
                 0.5)
 
@@ -501,6 +508,21 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
         except:
             self.log.exception('Error while setting up clock.')
             return -1
+        return 0
+
+    def set_up_laser(self):
+        self.LaserTask = daq.TaskHandle()
+        daq.DAQmxCreateTask('', daq.byref(self.LaserTask))
+
+        daq.DAQmxCreateAOVoltageChan(self.LaserTask,
+                                    self._laser_channel[0],
+                                    'Scanner AO Channel {0}'.format(3),
+                                    -10.0,
+                                    10.0,
+                                    daq.DAQmx_Val_Volts,
+                                    '')
+        daq.DAQmxSetSampTimingType(self.LaserTask, daq.DAQmx_Val_OnDemand)
+        # Nwritten = ctypes.c_int32()
         return 0
 
     def set_up_counter(self,
@@ -892,7 +914,7 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
         """
         n_ch = len(self.get_scanner_axes())
         if myrange is None:
-            myrange = [[-10., 10.], [-10., 10.], [-10., 10.], [-10., 10.]][0:n_ch]
+            myrange = [[0., 10.], [0., 10.], [0., 10.], [0., 10.]][0:n_ch]
 
         if not isinstance(myrange, (frozenset, list, set, tuple, np.ndarray)):
             self.log.error('Given range is no array type.')
@@ -1197,6 +1219,19 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
             # Reserved for future use. Pass NULL(here None) to this parameter
             None)
         return self._AONwritten.value
+
+    def _set_laser_power(self, new):
+        data = np.array([new], dtype=np.float64)
+
+        daq.DAQmxWriteAnalogF64(self.LaserTask,
+                                    1,
+                                    True,
+                                self._RWTimeout,
+                                    daq.DAQmx_Val_GroupByChannel,
+                                    data,
+                                    daq.byref(daq.int32()),
+                                    None)
+        return
 
     def _scanner_position_to_volt(self, positions=None):
         """ Converts a set of position pixels to acutal voltages.
@@ -1581,6 +1616,7 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
                 self._odmr_trigger_channel,
                 daq.DAQmx_Val_DoNotInvertPolarity)
             self._scanner_counter_daq_tasks.append(task)
+
         except:
             self.log.exception('Error while setting up ODMR scan.')
             return -1
@@ -1987,7 +2023,6 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
             retval = -1
         return retval
 
-
     # ======================== Digital channel control ==========================
 
 
@@ -2024,5 +2059,3 @@ class NICard(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterIn
             daq.DAQmxStopTask(self.digital_out_task)
             daq.DAQmxClearTask(self.digital_out_task)
             return 0
-
-

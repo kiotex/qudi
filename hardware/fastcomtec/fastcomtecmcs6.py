@@ -166,9 +166,11 @@ class FastComtec(Base, FastCounterInterface):
     """
     _modclass = 'FastComtec'
     _modtype = 'hardware'
+
     GATED = ConfigOption('gated', False, missing='warn')
     trigger_safety = ConfigOption('trigger_safety', 200e-9, missing='warn')
     aom_delay = ConfigOption('aom_delay', 400e-9, missing='warn')
+
 
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
@@ -195,6 +197,7 @@ class FastComtec(Base, FastCounterInterface):
             self.change_sweep_mode(gated=True)
         else:
             self.change_sweep_mode(gated=False)
+
         return
 
     def on_deactivate(self):
@@ -246,6 +249,7 @@ class FastComtec(Base, FastCounterInterface):
         return constraints
 
     def configure(self, bin_width_s, record_length_s, number_of_gates=0, filename=None):
+
         """ Configuration of the fast counter.
 
         @param float bin_width_s: Length of a single time bin in the time trace
@@ -325,7 +329,6 @@ class FastComtec(Base, FastCounterInterface):
         status = self.dll.Halt(0)
         while self.get_status() != 3:
             time.sleep(0.05)
-
         if self.GATED:
             self.timetrace_tmp = self.get_data_trace()
         return status
@@ -336,7 +339,6 @@ class FastComtec(Base, FastCounterInterface):
         status = self.dll.Halt(0)
         while self.get_status() != 1:
             time.sleep(0.05)
-
         if self.GATED:
             self.timetrace_tmp = []
         return status
@@ -411,8 +413,6 @@ class FastComtec(Base, FastCounterInterface):
             time_trace = time_trace + self.timetrace_tmp
 
         return time_trace
-
-
 
     # =========================================================================
     #                           Non Interface methods
@@ -558,8 +558,6 @@ class FastComtec(Base, FastCounterInterface):
     #   internal methods/function, because they might be important one day.
     # =========================================================================
 
-
-
     def SetLevel(self, start, stop):
         setting = AcqSettings()
         self.dll.GetSettingData(ctypes.byref(setting), 0)
@@ -577,13 +575,3 @@ class FastComtec(Base, FastCounterInterface):
         def WordToFloat(word):
             return (word & int('ffff',16)) * 4.096 / int('ffff',16) - 2.048
         return WordToFloat(setting.dac0), WordToFloat(setting.dac1)
-
-
-
-
-
-
-
-
-
-

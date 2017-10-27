@@ -89,12 +89,10 @@ class PulseAnalysisLogic(GenericLogic):
         @return: float array signal_data: Array with the computed signal
         @return: float array measuring_error: Array with the computed signal error
         """
-
         # convert time to bin
         self.signal_start_bin = round(self.signal_start_s / self.fast_counter_binwidth)
         self.signal_end_bin = round(self.signal_end_s / self.fast_counter_binwidth)
         self.norm_start_bin = round(self.norm_start_s / self.fast_counter_binwidth)
         self.norm_end_bin = round(self.norm_end_s / self.fast_counter_binwidth)
-
         signal_data, measuring_error = self.analysis_methods[self.current_method](laser_data)
         return signal_data, measuring_error

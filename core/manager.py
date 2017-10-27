@@ -40,6 +40,7 @@ from .util.modules import toposort, isBase
 from collections import OrderedDict
 from .logger import register_exception_handler
 from .threadmanager import ThreadManager
+
 # try to import RemoteObjectManager. Might fail if rpyc is not installed.
 try:
     from .remote import RemoteObjectManager
@@ -230,6 +231,7 @@ class Manager(QtCore.QObject):
         # we first look for config/load.cfg which can point to another
         # config file using the "configfile" key
         loadConfigFile = os.path.join(path, 'config', 'load.cfg')
+        #print(loadConfigFile)
         if os.path.isfile(loadConfigFile):
             logger.info('load.cfg config file found at {0}'.format(
                 loadConfigFile))
@@ -252,12 +254,17 @@ class Manager(QtCore.QObject):
                                             confDict['configfile']))
             except Exception:
                 logger.exception('Error while handling load.cfg.')
-        # try config/example/custom.cfg next
-        cf = os.path.join(path, 'config', 'example', 'custom.cfg')
-        if os.path.isfile(cf):
-            return cf
+        # # try config/example/custom.cfg next
+        # cf = os.path.join(path, 'config', 'example', 'custom.cfg')
+        # if os.path.isfile(cf):
+        #     return cf
+
         # try config/example/default.cfg
-        cf = os.path.join(path, 'config', 'example', 'default.cfg')
+        # cf = os.path.join(path, 'config', 'example', 'default.cfg')
+
+        # try tools/myload.cfg
+        cf = os.path.join(path, 'myload.cfg')
+
         if os.path.isfile(cf):
             return cf
         raise Exception('Could not find any config file.')
@@ -757,6 +764,7 @@ class Manager(QtCore.QObject):
             if 'remote' in defined_module:
                 if self.rm is None:
                     logger.error('Remote module functionality disabled. Rpyc not installed.')
+
                     return -1
                 if not isinstance(defined_module['remote'], str):
                     logger.error('Remote URI of {0} module {1} not a string.'.format(base, key))

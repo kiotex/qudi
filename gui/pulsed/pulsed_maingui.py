@@ -257,16 +257,17 @@ class PulsedMeasurementGui(GUIBase):
         self._pm_cfg.rejected.connect(self.keep_former_predefined_methods_config)
         self._pm_cfg.buttonBox.button(QtWidgets.QDialogButtonBox.Apply).clicked.connect(
             self.apply_predefined_methods_config)
+
         # Set ranges for the global parameters and default values
         self._pm.pm_mw_amp_Widget.setRange(0.0, np.inf)
         self._pm.pm_mw_freq_Widget.setRange(0.0, np.inf)
-        self._pm.pm_channel_amp_Widget.setRange(0.0, np.inf)
+        self._pm.pm_channel_amp_Widget.setRange(1.0, np.inf)
         self._pm.pm_delay_length_Widget.setRange(0.0, np.inf)
         self._pm.pm_wait_time_Widget.setRange(0.0, np.inf)
         self._pm.pm_laser_length_Widget.setRange(0.0, np.inf)
         self._pm.pm_rabi_period_Widget.setRange(0.0, np.inf)
-        self._pm.pm_mw_amp_Widget.setValue(0.125)
-        self._pm.pm_mw_freq_Widget.setValue(2.87e6)
+        self._pm.pm_mw_amp_Widget.setValue(0.250)
+        self._pm.pm_mw_freq_Widget.setValue(100e6)
         self._pm.pm_channel_amp_Widget.setValue(0.0)
         self._pm.pm_delay_length_Widget.setValue(500.0e-9)
         self._pm.pm_wait_time_Widget.setValue(1.5e-6)
@@ -438,6 +439,7 @@ class PulsedMeasurementGui(GUIBase):
             sauplo_button.clicked.connect(self.generate_sauplo_predefined_clicked)
             gridLayout.addWidget(gen_button, 0, 0, 1, 1)
             gridLayout.addWidget(sauplo_button, 1, 0, 1, 1)
+
             # inspect current method to extract the parameters
             inspected = inspect.signature(methods_dict[method_name])
             # run through all parameters of the current method and create the widgets
@@ -530,6 +532,9 @@ class PulsedMeasurementGui(GUIBase):
     def _activate_pulse_generator_ui(self):
         """ Initialize, connect and configure the 'Pulse Generator' Tab.
         """
+        self._pg.Vpp.editingFinished.connect(self.set_vpp)
+        self._pg.laser_on.stateChanged.connect(self.laser_on)
+
         # connect signals of input widgets
         self._pg.gen_sample_freq_DSpinBox.editingFinished.connect(self.generator_settings_changed, QtCore.Qt.QueuedConnection)
         self._pg.gen_laserchannel_ComboBox.currentIndexChanged.connect(self.generator_settings_changed, QtCore.Qt.QueuedConnection)
@@ -654,6 +659,20 @@ class PulsedMeasurementGui(GUIBase):
         # unblock signals
         self._pg.gen_activation_config_ComboBox.blockSignals(False)
         self._pg.gen_sample_freq_DSpinBox.blockSignals(False)
+        return
+
+    def set_vpp(self):
+
+        self._pulsed_master_logic._measurement_logic.set_vpp(self._pg.Vpp.value())
+        return
+
+    def laser_on(self):
+
+        if self._pg.laser_on.isChecked():
+            self._pulsed_master_logic._measurement_logic._pulse_generator_device.set_active_channels({'a_ch1': False})
+        else:
+            self._pulsed_master_logic._measurement_logic._pulse_generator_device.set_active_channels({'a_ch1': True})
+
         return
 
     def generator_settings_changed(self):
@@ -924,7 +943,8 @@ class PulsedMeasurementGui(GUIBase):
             # FIXME: This is just a rough estimation of the waveform size in MB (only valid for AWG)
             size_mb = (ensemble_params['sequence_length_bins'] * 5) / 1024**2
             self._pg.curr_ensemble_size_DSpinBox.setValue(size_mb)
-            self._pg.curr_ensemble_laserpulses_SpinBox.setValue(ensemble_params['num_of_lasers'])
+
+            self._pg.curr_ensemble_laserpulses_SpinBox.setValue(ensemble_params['num_of_lasers']-1)
         else:
             self._pg.curr_ensemble_length_DSpinBox.setValue(0.0)
             self._pg.curr_ensemble_bins_SpinBox.setValue(0)
@@ -948,6 +968,7 @@ class PulsedMeasurementGui(GUIBase):
             self._sg.curr_sequence_size_DSpinBox.setValue(0.0)
         if sequence_obj is not None:
             self._sg.curr_sequence_name_LineEdit.setText(sequence_obj.name)
+
         return
 
     def update_block_dict(self, block_dict):
@@ -1003,6 +1024,7 @@ class PulsedMeasurementGui(GUIBase):
         @param sequence_dict:
         @return:
         """
+
         # Check if a sequence has been added. In that case set the current index to the new one.
         # In all other cases try to maintain the current item and if it was removed, set the first.
         text_to_set = None
@@ -1041,6 +1063,7 @@ class PulsedMeasurementGui(GUIBase):
         self._pg.sauplo_ensemble_PushButton.setEnabled(False)
         # Sample and upload the ensemble via logic module
         self._pulsed_master_logic.sample_block_ensemble(ensemble_name, False)
+        # self._pulsed_master_logic.sample_pulse_sequence(ensemble_name, False)
         return
 
     def saup_ensemble_finished(self, ensemble_name):
@@ -1351,10 +1374,12 @@ class PulsedMeasurementGui(GUIBase):
                                              symbolPen=palette.c4,
                                              symbolBrush=palette.c4,
                                              symbolSize=7)
+
         self._pa.pulse_analysis_PlotWidget.addItem(self.signal_image2)
         self._pa.pulse_analysis_PlotWidget.showGrid(x=True, y=True, alpha=0.8)
 
         # Configure the fit of the data in the main pulse analysis display:
+
         self.fit_image = pg.PlotDataItem(pen=palette.c3)
         self._pa.pulse_analysis_PlotWidget.addItem(self.fit_image)
 
@@ -1411,13 +1436,14 @@ class PulsedMeasurementGui(GUIBase):
         # set boundaries
         self._pe.extract_param_conv_std_dev_slider.setRange(1, 200)
         self._pe.extract_param_conv_std_dev_DSpinBox.setRange(1, 200)
+
         self._pa.ana_param_x_axis_start_ScienDSpinBox.setRange(0, 1.0e99)
         self._pa.ana_param_x_axis_inc_ScienDSpinBox.setRange(0, 1.0e99)
         self._pa.ana_param_num_laser_pulse_SpinBox.setRange(1, 1e6)
         self._pa.ana_param_record_length_SpinBox.setRange(0, 1.0e99)
         self._pa.time_param_ana_periode_DoubleSpinBox.setRange(0, 1.0e99)
         self._pa.ext_control_mw_freq_DoubleSpinBox.setRange(0, 1.0e99)
-        self._pa.ext_control_mw_power_DoubleSpinBox.setRange(0, 1.0e99)
+        self._pa.ext_control_mw_power_DoubleSpinBox.setRange(-100, 1.0e99)
         self._pe.extract_param_threshold_SpinBox.setRange(1, 2**31-1)
 
         # ---------------------------------------------------------------------
@@ -1482,6 +1508,7 @@ class PulsedMeasurementGui(GUIBase):
         self._pe.extract_param_ana_window_width_DSpinBox.editingFinished.connect(self.analysis_settings_changed)
         self._pe.extract_param_ref_window_start_DSpinBox.editingFinished.connect(self.analysis_settings_changed)
         self._pe.extract_param_ref_window_width_DSpinBox.editingFinished.connect(self.analysis_settings_changed)
+
         self._pe.extract_param_conv_std_dev_DSpinBox.editingFinished.connect(self.extraction_settings_changed)
         self._pe.extract_param_threshold_SpinBox.editingFinished.connect(self.extraction_settings_changed)
         self._pe.extract_param_min_laser_length_SpinBox.editingFinished.connect(self.extraction_settings_changed)
@@ -1501,7 +1528,6 @@ class PulsedMeasurementGui(GUIBase):
         self.ref_start_line.sigPositionChangeFinished.connect(self.analysis_settings_changed)
         self.ref_end_line.sigPositionChangeFinished.connect(self.analysis_settings_changed)
         self._pe.extract_param_conv_std_dev_slider.valueChanged.connect(self.extraction_settings_changed)
-
 
         # apply hardware constraints
         self._analysis_apply_hardware_constraints()

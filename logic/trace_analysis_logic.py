@@ -820,6 +820,7 @@ class TraceAnalysisLogic(GenericLogic):
 
             try:
                 result = self._fit_logic.make_gaussiandouble_fit(x_axis, y_data, self._fit_logic.estimate_gaussiandouble_peak)
+
                 # calculating the threshold
                 # NOTE the threshold is taken as the intersection of the two gaussians, while this should give
                 # a good approximation I doubt it is mathematical exact.

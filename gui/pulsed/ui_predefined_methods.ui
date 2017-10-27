@@ -336,7 +336,7 @@
               <string>Pulse generator channel used for a synchonization trigger for fast counter devices.</string>
              </property>
              <property name="text">
-              <string>d_ch3</string>
+              <string/>
              </property>
             </widget>
            </item>

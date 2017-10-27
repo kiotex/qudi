@@ -46,6 +46,7 @@ class ODMRLogic(GenericLogic):
     microwave1 = Connector(interface='mwsourceinterface')
     savelogic = Connector(interface='SaveLogic')
     taskrunner = Connector(interface='TaskRunner')
+    pulsegenerator = Connector(interface='PulserInterface')
 
     # config option
     mw_scanmode = ConfigOption(
@@ -83,12 +84,17 @@ class ODMRLogic(GenericLogic):
         """
         Initialisation performed during activation of the module.
         """
+        config = self.getConfiguration()
+
+        self.mw_scanmode = config['scanmode']
+
         # Get connectors
         self._mw_device = self.get_connector('microwave1')
         self._fit_logic = self.get_connector('fitlogic')
         self._odmr_counter = self.get_connector('odmrcounter')
         self._save_logic = self.get_connector('savelogic')
         self._taskrunner = self.get_connector('taskrunner')
+        self._pulse_generator_device = self.get_connector('pulsegenerator')
 
         # Get hardware constraints
         limits = self.get_hw_constraints()
@@ -103,7 +109,7 @@ class ODMRLogic(GenericLogic):
 
         # Set the trigger polarity (RISING/FALLING) of the mw-source input trigger
         # theoretically this can be changed, but the current counting scheme will not support that
-        self.mw_trigger_pol = TriggerEdge.RISING
+        self.mw_trigger_pol = TriggerEdge.FALLING
         self.set_trigger_pol(self.mw_trigger_pol)
 
         # Elapsed measurement time and number of sweeps
@@ -124,6 +130,7 @@ class ODMRLogic(GenericLogic):
         # Switch off microwave and set CW frequency and power
         self.mw_off()
         self.set_cw_parameters(self.cw_mw_frequency, self.cw_mw_power)
+        self._pulse_generator_device.pulser_off()
 
         # Connect signals
         self.sigNextLine.connect(self._scan_odmr_line, QtCore.Qt.QueuedConnection)
@@ -146,6 +153,7 @@ class ODMRLogic(GenericLogic):
                 break
         # Switch off microwave source for sure (also if CW mode is active or module is still locked)
         self._mw_device.off()
+        self._pulse_generator_device.pulser_off()
         # Disconnect signals
         self.sigNextLine.disconnect()
 
@@ -193,7 +201,7 @@ class ODMRLogic(GenericLogic):
 
     def _initialize_odmr_plots(self):
         """ Initializing the ODMR plots (line and matrix). """
-        self.odmr_plot_x = np.arange(self.mw_start, self.mw_stop + self.mw_step, self.mw_step)
+        self.odmr_plot_x = np.arange(self.mw_start, self.mw_stop + self.mw_step, self.mw_step)+0.1e+9
         self.odmr_plot_y = np.zeros(self.odmr_plot_x.size)
         self.odmr_fit_x = np.arange(self.mw_start, self.mw_stop + self.mw_step, self.mw_step)
         self.odmr_fit_y = np.zeros(self.odmr_fit_x.size)
@@ -488,9 +496,22 @@ class ODMRLogic(GenericLogic):
                 self.unlock()
                 return -1
 
+            if self._pulse_generator_device.get_loaded_asset() == 'Laser_MW_On':
+                self._pulse_generator_device.set_active_channels({'a_ch1': True})
+                time.sleep(0.5)
+                self._pulse_generator_device.pulser_on()
+            else:
+                self.log.error('load Laser_MW_On sequence on AWG')
+                self._stop_odmr_counter()
+                self._pulse_generator_device.pulser_off()
+                self.mw_off()
+                self.unlock()
+                return -1
+
             mode, is_running = self.mw_sweep_on()
             if not is_running:
                 self._stop_odmr_counter()
+                self._pulse_generator_device.pulser_off()
                 self.unlock()
                 return -1
 
@@ -573,6 +594,7 @@ class ODMRLogic(GenericLogic):
             if self.stopRequested:
                 self.stopRequested = False
                 self.mw_off()
+                self._pulse_generator_device.pulser_off()
                 self._stop_odmr_counter()
                 self.unlock()
                 return
@@ -886,7 +908,9 @@ class ODMRLogic(GenericLogic):
         self.set_runtime(runtime)
 
         # start the scan
-        self.start_odmr_scan()
+        if self._pulse_generator_device.get_loaded_asset()=='Laser_MW_On':
+            self._pulse_generator_device.pulser_on()
+            self.start_odmr_scan()
 
         # wait until the scan has started
         while self.getState() != 'locked':

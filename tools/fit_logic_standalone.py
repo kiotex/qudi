@@ -57,7 +57,6 @@ import os
 
 from core.util.units import compute_ft
 
-
 class FitLogic():
         """
         This file contains a test bed for implementation of new fit
@@ -1881,7 +1880,6 @@ def lorentziandip_testing2():
     print(result.fit_report())
     print(result.result_str_dict)
 
-
 def lorentzianpeak_testing2():
     """ Test the lorentzian fit directy with simulated data. """
     x_axis = np.linspace(800, 1000, 101)
@@ -2672,8 +2670,6 @@ def double_poissonian_testing_data():
                ncol=2, mode="expand", borderaxespad=0.)
     plt.show()
 
-
-
 ###############################################################################
 
 def exponentialdecay_testing():
@@ -2682,6 +2678,7 @@ def exponentialdecay_testing():
     x_axis = np.linspace(1, 51, 30)
     x_nice = np.linspace(x_axis[0], x_axis[-1], 100)
     mod, params = qudi_fitting.make_decayexponential_model()
+
     print('Parameters of the model', mod.param_names,
           ' with the independet variable', mod.independent_vars)
 
@@ -2822,6 +2819,7 @@ def bareexponentialdecay_testing():
           ' with the independet variable', mod.independent_vars)
 
     params['lifetime'].value = 1 + abs(np.random.normal(0,10))
+
     print('\n''lifetime', params['lifetime'].value)
 
     data_noisy = (mod.eval(x=x_axis, params=params)
@@ -2891,6 +2889,7 @@ def bareexponentialdecay_testing():
                ncol=2, mode="expand", borderaxespad=0.)
     plt.xlabel('Time x')
     plt.ylabel('signal')
+
     plt.show()
 
 #############################################################################################

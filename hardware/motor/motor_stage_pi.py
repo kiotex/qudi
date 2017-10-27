@@ -290,7 +290,6 @@ class MotorStagePI(Base, MotorInterface):
             self.log.error('Could not find current xyz motor position')
             return -1
 
-
     def get_status(self, param_list=None):
         """ Get the status of the position
 
@@ -467,9 +466,7 @@ class MotorStagePI(Base, MotorInterface):
         """internal method for the relative move
 
         @param axis string: name of the axis that should be moved
-
         @param float step: step in meter
-
         @return str axis: axis which is moved
                 move float: absolute position to move to
         """
@@ -487,9 +484,7 @@ class MotorStagePI(Base, MotorInterface):
         """internal method for the absolute move in meter
 
         @param axis string: name of the axis that should be moved
-
         @param float move: desired position in meter
-
         @return str axis: axis which is moved
                 move float: absolute position to move to
         """
@@ -540,10 +535,3 @@ class MotorStagePI(Base, MotorInterface):
             #########################################################################################
 #########################################################################################
 #########################################################################################
-
-
-
-
-
-
-

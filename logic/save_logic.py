@@ -123,7 +123,7 @@ class SaveLogic(GenericLogic):
     _modclass = 'savelogic'
     _modtype = 'logic'
 
-    _win_data_dir = ConfigOption('win_data_directory', 'C:/Data/')
+    _win_data_dir = ConfigOption('win_data_directory', 'G:\data\QudiData')
     _unix_data_dir = ConfigOption('unix_data_directory', 'Data')
     log_into_daily_directory = ConfigOption('log_into_daily_directory', False, missing='warn')
 

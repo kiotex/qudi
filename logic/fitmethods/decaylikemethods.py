@@ -252,8 +252,6 @@ def estimate_decayexponential(self, x_axis, data, params):
     # the data level therefore. Otherwise problems in the logarithm appear.
     if data_level.min() <= 0:
         data_level = data_level - data_level.min()
-
-
     # remove all the data that can be smaller than or equals to std.
     # when the data is smaller than std, it is beyond resolution
     # which is not helpful to our fitting.
@@ -279,7 +277,6 @@ def estimate_decayexponential(self, x_axis, data, params):
             params['amplitude'].set(value=np.exp(linear_result.params['offset'].value), min=ampl)
     except:
         self.log.warning('Lifetime too small in estimate_exponentialdecay, beyond resolution!')
-
         params['lifetime'].set(value=x_axis[i]-x_axis[0], min=min_lifetime)
         params['amplitude'].set(value=data_level[0])
 

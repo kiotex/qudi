@@ -154,7 +154,6 @@ class MicrowaveGigatronics(Base, MicrowaveInterface):
     def get_power(self):
         """
         Gets the microwave output power.
-
         @return float: the power set at the device in dBm
         """
         mode, dummy = self.get_status()
@@ -380,4 +379,3 @@ class MicrowaveGigatronics(Base, MicrowaveInterface):
         self._gpib_connection.write('*TRG')
         time.sleep(self._FREQ_SWITCH_SPEED)  # that is the switching speed
         return 0
-

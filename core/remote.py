@@ -152,7 +152,6 @@ class RemoteObjectManager(QObject):
           @param str url: URL pointing to a module hosted b a remote server
           @param str certfile: filename of certificate or None if SSL is not used
           @param str keyfile: filename of key or None if SSL is not used
-
           @return object: remote module
         """
         parsed = urlparse(url)
@@ -211,7 +210,6 @@ class RPyCServer(QObject):
                 port=self.port,
                 protocol_config={'allow_all_attrs': True})
         self.server.start()
-
 
 class RemoteModule:
     """ This class represents a module on a remote computer and holds a reference to it.

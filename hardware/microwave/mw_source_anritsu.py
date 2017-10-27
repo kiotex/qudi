@@ -117,6 +117,7 @@ class MicrowaveAnritsu(Base, MicrowaveInterface):
         return 0
 
     def get_status(self):
+
         """
         Gets the current status of the MW source, i.e. the mode (cw, list or sweep) and
         the output state (stopped, running)
@@ -132,7 +133,6 @@ class MicrowaveAnritsu(Base, MicrowaveInterface):
     def get_power(self):
         """
         Gets the microwave output power.
-
         @return float: the power set at the device in dBm
         """
         return float(self._gpib_connection.query(':POW?'))
@@ -187,6 +187,7 @@ class MicrowaveAnritsu(Base, MicrowaveInterface):
         return 0
 
     def set_cw(self, frequency=None, power=None):
+
         """
         Configures the device for cw-mode and optionally sets frequency and/or power
 
@@ -283,6 +284,7 @@ class MicrowaveAnritsu(Base, MicrowaveInterface):
         return actual_freq, actual_power, mode
 
     def reset_listpos(self):
+
         """
         Reset of MW list mode position to start (first frequency step)
 

@@ -888,7 +888,6 @@ class PulsedMasterLogic(GenericLogic):
         self.sigSignalDataUpdated.emit(signal_data_x, signal_data_y, signal_data_y2, error_data_y,
                                        error_data_y2, signal_fft_x, signal_fft_y, signal_fft_y2)
         return
-
     def extraction_settings_changed(self, method, conv_std_dev, count_threshold,
                                     threshold_tolerance_bins, min_laser_length):
         """
@@ -1163,6 +1162,7 @@ class PulsedMasterLogic(GenericLogic):
         @param sampling_format:
         @return:
         """
+
         # get pulser constraints
         pulser_constraints = self._measurement_logic.get_pulser_constraints()
         # activation config
@@ -1238,6 +1238,8 @@ class PulsedMasterLogic(GenericLogic):
                 self.sigPulserSettingsUpdated.emit(sample_rate, activation_config_name,
                                                    activation_config, amplitude_dict,
                                                    self._measurement_logic.interleave_on)
+
+        self._measurement_logic.set_pulse_generator_settings(sample_rate, activation_config_name, amplitude_dict)
         return
 
     def generate_predefined_sequence(self, generator_method_name, kwarg_dict):

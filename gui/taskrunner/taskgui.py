@@ -26,7 +26,10 @@ from gui.guibase import GUIBase
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import uic
-
+import schedule, time, sched
+from apscheduler.schedulers.blocking import BlockingScheduler
+from threading import Timer
+# s = sched.scheduler(time.time, time.sleep)
 
 class TaskGui(GUIBase):
     """ A grephical interface to mofe switches by hand and change their calibration.
@@ -48,6 +51,8 @@ class TaskGui(GUIBase):
         self.logic = self.get_connector('tasklogic')
         self._mw.taskTableView.setModel(self.logic.model)
         self._mw.taskTableView.clicked.connect(self.setRunToolState)
+        self._mw.startpushbutton.clicked.connect(self.periodic_focusing)
+        self._mw.startpushbutton.clicked.connect(self.stop_periodic_focusing)
         self._mw.actionStart_Task.triggered.connect(self.manualStart)
         self._mw.actionPause_Task.triggered.connect(self.manualPause)
         self._mw.actionStop_Task.triggered.connect(self.manualStop)
@@ -55,6 +60,10 @@ class TaskGui(GUIBase):
         self.sigPauseTaskFromList.connect(self.logic.pauseTaskByIndex)
         self.sigStopTaskFromList.connect(self.logic.stopTaskByIndex)
         self.logic.model.dataChanged.connect(lambda i1, i2: self.setRunToolState(None, i1))
+
+        self._mw.refocus_time.setValue(self.logic.refocus_time)
+        self._mw.refocus_time.editingFinished.connect(self.change_time)
+
         self.show()
 
     def show(self):
@@ -72,6 +81,26 @@ class TaskGui(GUIBase):
         selected = self._mw.taskTableView.selectedIndexes()
         if len(selected) >= 1:
             self.sigRunTaskFromList.emit(selected[0])
+
+    def periodic_focusing(self):
+        def do_every(interval, iterations=0):
+            self.manualStart()
+            if iterations != 1:
+                self.t = Timer(interval, do_every, [interval, 0 if iterations == 0 else iterations - 1])
+                self.t.start()
+
+        do_every(self._mw.refocus_time.value()*60)
+
+        # def do_something(sc):
+        #     self.manualStart()
+        #     s.enter(self._mw.refocus_time.value()*60, 1, do_something, (sc,))
+        #
+        # s.enter(self._mw.refocus_time.value()*60, 1, do_something, (s,))
+        # s.run()
+
+    def stop_periodic_focusing(self):
+        self.t.cancel()
+        return
 
     def manualPause(self):
         selected = self._mw.taskTableView.selectedIndexes()
@@ -109,6 +138,15 @@ class TaskGui(GUIBase):
                 self._mw.actionStart_Task.setEnabled(False)
                 self._mw.actionStop_Task.setEnabled(False)
                 self._mw.actionPause_Task.setEnabled(False)
+
+    def change_time(self):
+        """ Update the starting position along x axis in the logic according to the GUI.
+        """
+        # self.t.cancel()
+        self.logic.refocus_time = self._mw.refocus_time.value()
+        self.periodic_focusing()
+
+        return
 
 class TaskMainWindow(QtWidgets.QMainWindow):
     """ Helper class for window loaded from UI file.

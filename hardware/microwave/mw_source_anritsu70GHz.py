@@ -45,7 +45,6 @@ class MicrowaveAnritsu70GHz(Base, MicrowaveInterface):
 
     # Indicate how fast frequencies within a list or sweep mode can be changed:
     _FREQ_SWITCH_SPEED = 0.009  # Frequency switching speed in s (acc. to specs)
-
     def on_activate(self):
         """ Initialisation performed during activation of the module.
         """
@@ -117,6 +116,7 @@ class MicrowaveAnritsu70GHz(Base, MicrowaveInterface):
         return 0
 
     def get_status(self):
+
         """
         Gets the current status of the MW source, i.e. the mode (cw, list or sweep) and
         the output state (stopped, running)

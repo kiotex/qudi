@@ -29,7 +29,6 @@ from scipy.ndimage import filters
 from scipy.interpolate import InterpolatedUnivariateSpline
 from collections import OrderedDict
 
-
 from scipy.special import gammaln, xlogy
 
 ################################################################################
@@ -273,7 +272,6 @@ def make_poissoniandouble_fit(self, x_axis, data, estimator, units=None, add_par
                          'normal/ gaussian distribution is a good '
                          'approximation.')
         result = double_poissonian_model.fit(data, x=x_axis, params=params)
-
     # Write the parameters to allow human-readable output to be generated
     result_str_dict = OrderedDict()
     if units is None:

@@ -395,7 +395,6 @@ class PoiManagerGui(GUIBase):
         self._mw.autofind_pois_Action.triggered.connect(self.do_autofind_poi_procedure)
         self._mw.optimize_roi_Action.triggered.connect(self.optimize_roi)
 
-
         self._mw.new_poi_Action.triggered.connect(self.set_new_poi)
         self._mw.goto_poi_Action.triggered.connect(self.goto_poi)
         self._mw.refind_poi_Action.triggered.connect(self.update_poi_pos)
@@ -617,6 +616,7 @@ class PoiManagerGui(GUIBase):
     def _remove_poi_marker(self, poikey):
         """ Remove the POI marker for a POI that was deleted.
         """
+
         self._markers[poikey].delete_from_viewwidget()
         del self._markers[poikey]
 
@@ -631,6 +631,7 @@ class PoiManagerGui(GUIBase):
     def move_poi(self):
         """Manually move a POI to a new location in the sample map, but WITHOUT changing the sample position.  This moves a POI relative to all the others.
         """
+
         if self._poi_manager_logic.active_poi is None:
             self.log.warning("No POI selected.")
         else:
@@ -654,6 +655,7 @@ class PoiManagerGui(GUIBase):
 
     def goto_poi(self, key):
         """ Go to the last known position of poi <key>."""
+
         if self._poi_manager_logic.active_poi is None:
             self.log.warning("No POI selected.")
         else:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module operates a confocal microsope.
+This module operates a confocal microscope.
 
 Qudi is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -344,6 +344,11 @@ class ConfocalLogic(GenericLogic):
 
         self._change_position('activation')
 
+        self._scanning_device.set_up_laser()
+
+        self.laser_power = -7.8
+        self.set_laser_power(-7.8)
+
     def on_deactivate(self):
         """ Reverse steps of activation
 
@@ -357,6 +362,10 @@ class ConfocalLogic(GenericLogic):
             self._statusVariables['history_{0}'.format(histindex)] = state.serialize()
             histindex += 1
         return 0
+
+    def set_laser_power(self, power):
+        self._scanning_device._set_laser_power(power)
+        self.laser_power=power
 
     def switch_hardware(self, to_on=False):
         """ Switches the Hardware off or on.

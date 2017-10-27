@@ -440,7 +440,6 @@ class PoiManagerLogic(GenericLogic):
         self.active_poi = self.poi_list[poikey]
         self.signal_poi_updated.emit()
 
-
     def get_poi_position(self, poikey=None):
         """ Returns the current position of the given poi, calculated from the
         POI coords in sample and the current sample position.

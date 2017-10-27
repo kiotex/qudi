@@ -106,5 +106,3 @@ class PulseExtractionLogic(GenericLogic):
             return_dict = self.ungated_extraction_methods[self.current_method](count_data)
         return return_dict
 
-
-

@@ -24,7 +24,6 @@ import visa
 import time
 
 from collections import OrderedDict
-
 from core.module import Base, ConfigOption
 from interface.motor_interface import MotorInterface
 
@@ -218,6 +217,7 @@ class MotorStageMicos(Base, MotorInterface):
         axis3['acc_min'] = None
         axis3['acc_max'] = None
         axis3['acc_step'] = None
+
         # assign the parameter container for x to a name which will identify it
         constraints[axis0['label']] = axis0
         constraints[axis1['label']] = axis1
@@ -437,13 +437,12 @@ class MotorStageMicos(Base, MotorInterface):
     #     # return 0
     #
 
-
-
     def abort(self):
         """Stops movement of the stage
 
         @return int: error code (0:OK, -1:error)
         """
+
         try:
             # only checking sending command to x and z because these
             # are the two axis and they also abort y and phi
@@ -602,7 +601,6 @@ class MotorStageMicos(Base, MotorInterface):
             # setting axes active
             self._write('z', 'cal')
 
-
     def get_velocity(self, param_list=None):
         """ Gets the current velocity for all connected axes.
 
@@ -614,6 +612,7 @@ class MotorStageMicos(Base, MotorInterface):
 
         @return dict : with the axis label as key and the velocity as item.
         """
+
         constraints = self.get_constraints()
         vel = {}
 

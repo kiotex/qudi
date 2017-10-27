@@ -39,6 +39,7 @@ from logic.pulse_objects import PulseSequence
 from logic.generic_logic import GenericLogic
 from logic.sampling_functions import SamplingFunctions
 from logic.samples_write_methods import SamplesWriteMethods
+from core.module import Base, ConfigOption
 
 
 class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethods):
@@ -69,9 +70,19 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
     laser_channel = StatusVar('laser_channel', 'd_ch1')
     amplitude_dict = StatusVar(
         'amplitude_dict',
-        OrderedDict({'a_ch1': 0.5, 'a_ch2': 0.5, 'a_ch3': 0.5, 'a_ch4': 0.5}))
-    sample_rate = StatusVar('sample_rate', 25e9)
-    waveform_format = StatusVar('waveform_format', 'wfmx')
+        OrderedDict({'a_ch1': 0.25, 'a_ch2': 0.25, 'a_ch3': 0.25, 'a_ch4': 0.25}))
+    # sample_rate = StatusVar('sample_rate', 1.2e9)
+    waveform_format = StatusVar('waveform_format', 'wfm')
+
+    @property
+    def sample_rate(self):
+        return getattr(self, '_sample_rate', 1.2e9)
+
+    @sample_rate.setter
+    def sample_rate(self, val):
+        self._sample_rate = val
+
+    #pulsed_file_dir = ConfigOption('pulsed_file_dir', missing='error')
 
     # define signals
     sigBlockDictUpdated = QtCore.Signal(dict)
@@ -287,6 +298,7 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
         @param waveform_format:
         @return:
         """
+
         # check if the currently chosen laser channel is part of the config and adjust if this
         # is not the case. Choose first digital channel in that case.
         if laser_channel not in activation_config:
@@ -346,6 +358,7 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
         self.saved_pulse_blocks[name] = block
         self._save_blocks_to_file()
         self.sigBlockDictUpdated.emit(self.saved_pulse_blocks)
+
         return
 
     def load_block(self, name):
@@ -435,6 +448,7 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
         self.saved_pulse_block_ensembles[name] = ensemble
         self._save_ensembles_to_file()
         self.sigEnsembleDictUpdated.emit(self.saved_pulse_block_ensembles)
+
         return
 
     def load_ensemble(self, name):
@@ -461,6 +475,7 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
                                      self.amplitude_dict, self.waveform_format)
         self.current_ensemble = ensemble
         self.sigCurrentEnsembleUpdated.emit(ensemble)
+
         return
 
     def delete_ensemble(self, name):
@@ -562,6 +577,7 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
                                      self.amplitude_dict, self.waveform_format)
         self.current_sequence = sequence
         self.sigCurrentSequenceUpdated.emit(sequence)
+
         return
 
     def delete_sequence(self, name):
@@ -849,7 +865,6 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
                             digital_samples[i, entry_ind:entry_ind+element_length_bins] = np.full(element_length_bins, state, dtype=bool)
                         for i, func_name in enumerate(pulse_function):
                             analog_samples[i, entry_ind:entry_ind+element_length_bins] = np.float32(self._math_func[func_name](time_arr, parameters[i])/self.amplitude_dict[ana_chnl_names[i]])
-
                         # increment the index offset of the overall sample array for the next
                         # element
                         entry_ind += element_length_bins
@@ -928,7 +943,7 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
         if write_to_file:
             # get sampled filenames on host PC referring to the same ensemble
             filename_list = [f for f in os.listdir(self.sequence_dir) if
-                             f.startswith(sequence_name + '.seq')]
+                             f.startswith(sequence_name + '.SEQ')]
             # delete all filenames in the list
             for file in filename_list:
                 os.remove(os.path.join(self.sequence_dir, file))
@@ -957,9 +972,7 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
                 # to make something like 001
                 name_tag = sequence_name + '_' + str(ensemble_index).zfill(3)
 
-                dummy1, \
-                dummy2, \
-                offset_bin_return = self.sample_pulse_block_ensemble(ensemble_obj.name,
+                analog_samples, digital_samples, offset_bin_return = self.sample_pulse_block_ensemble(ensemble_obj.name,
                                                                      write_to_file=write_to_file,
                                                                      offset_bin=offset_bin,
                                                                      name_tag=name_tag)
@@ -970,7 +983,6 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
                 for ch_num in ana_chnl_num:
                     name_list.append(name_tag + '_ch' + str(ch_num) + '.' + self.waveform_format)
                 temp_dict['name'] = name_list
-
                 # update the sequence parameter to the temp dict:
                 temp_dict.update(seq_param)
                 # add the whole dict to the list of dicts, containing information about how to

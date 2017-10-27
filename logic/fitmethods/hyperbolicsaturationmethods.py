@@ -24,7 +24,6 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 from lmfit.models import Model
 import numpy as np
 
-
 ################################################################################
 #                                                                              #
 #                Hyperbolic saturation models                                  #
@@ -107,7 +106,6 @@ def make_hyperbolicsaturation_fit(self, x_axis, data, estimator, units=None, add
         update_params=add_params)
 
     result = mod_final.fit(data, x=x_axis, params=params)
-
     return result
 
 
@@ -145,6 +143,5 @@ def estimate_hyperbolicsaturation(self, x_axis, data, params):
     params['slope'].value = est_slope
     params['offset'].value = est_offset
     params['P_sat'].value = est_P_sat
-
 
     return error, params

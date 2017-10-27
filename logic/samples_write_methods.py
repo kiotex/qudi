@@ -451,7 +451,6 @@ class SamplesWriteMethods():
             # write main part:
             # in this order: 'waveform_name', repeat, wait, Goto, ejump
             for seq_param_dict in sequence_param:
-                print(seq_param_dict)
                 repeat = seq_param_dict['repetitions']
                 trigger_wait = seq_param_dict['trigger_wait']
                 go_to = seq_param_dict['go_to']

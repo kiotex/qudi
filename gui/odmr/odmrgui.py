@@ -29,6 +29,8 @@ from core.util import units
 from gui.guibase import GUIBase
 from gui.guiutils import ColorBar
 from gui.colordefs import ColorScaleInferno
+from gui.colordefs import ColorScaleViridis
+
 from gui.colordefs import QudiPalettePale as palette
 from gui.fitsettings import FitSettingsDialog, FitSettingsComboBox
 from qtpy import QtCore
@@ -179,7 +181,7 @@ class ODMRGui(GUIBase):
         self._mw.odmr_matrix_PlotWidget.setLabel(axis='bottom', text='Frequency', units='Hz')
 
         # Get the colorscales at set LUT
-        my_colors = ColorScaleInferno()
+        my_colors = ColorScaleViridis()
         self.odmr_matrix_image.setLookupTable(my_colors.lut)
 
         ########################################################################
@@ -666,11 +668,12 @@ class ODMRGui(GUIBase):
             self._mw.cw_power_DoubleSpinBox.blockSignals(True)
             self._mw.cw_power_DoubleSpinBox.setValue(param)
             self._mw.cw_power_DoubleSpinBox.blockSignals(False)
+
         return
 
-    ############################################################################
-    #                           Change Methods                                 #
-    ############################################################################
+        ############################################################################
+        #                           Change Methods                                 #
+        ############################################################################
 
     def change_cw_params(self):
         """ Change CW frequency and power of microwave source """

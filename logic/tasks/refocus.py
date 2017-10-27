@@ -28,7 +28,7 @@ class Task(InterruptableTask):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        print('Task {0} added!'.format(self.name))
+        # print('Task {0} added!'.format(self.name))
 
     def startTask(self):
         """ Get position from scanning device and do the refocus """

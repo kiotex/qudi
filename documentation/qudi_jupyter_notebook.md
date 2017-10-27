@@ -17,7 +17,7 @@
     - port: 12345
 ~~~~~~~~~~~~~
 
- * Ensure that your Qudi configuration file contains the following 
+ * Ensure that your Qudi configuration file contains the following
   entry in the `logic` section:
 
 ~~~~~~~~~~~~~
@@ -31,6 +31,7 @@
   * Run `jupyter notebook` or an equivalent, when starting from the
   Windows Start menu, be sure to pick the Jupyter notebook installed
   into the Qudi environment
+
   * Start Qudi with the configuration you checked before
   * Now, the 'New' menu should have a 'Qudi' entry and in a notebook, 
   the 'Kernel->Change kernel' menu should also have a qudi entry

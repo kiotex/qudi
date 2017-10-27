@@ -42,7 +42,7 @@ def get_unit_prefix_dict():
         'p': 1e-12,
         'n': 1e-9,
         'µ': 1e-6,
-        'm': 1e-3,
+        #'m': 1e-3,
         '': 1,
         'k': 1e3,
         'M': 1e6,
@@ -414,7 +414,6 @@ def in_range(value, lower_limit, upper_limit):
         return lower_limit
     return value
 
-
 def get_ft_windows():
     """ Retrieve the available windows to be applied on signal data before FT.
 
@@ -472,7 +471,6 @@ def compute_ft(x_val, y_val, zeropad_num=0, window='none', base_corr=True,
                      the Power Spectral Density (PSD, which is just the FT of
                      the absolute square of the y-values) should be computed.
                      Default is psd=False.
-
     @return: tuple(dft_x, dft_y):
                 be aware that the return arrays' length depend on the zeropad
                 number like

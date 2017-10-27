@@ -49,7 +49,6 @@ class MicrowaveSRSSG(Base, MicrowaveInterface):
     def on_activate(self):
         """ Initialisation performed during activation of the module. """
 
-
         # trying to load the visa connection to the module
         self.rm = visa.ResourceManager()
         try:
@@ -161,7 +160,6 @@ class MicrowaveSRSSG(Base, MicrowaveInterface):
         while is_running:
             time.sleep(0.1)
             dummy, is_running = self.get_status()
-
         return 0
 
     def get_power(self):
@@ -220,6 +218,7 @@ class MicrowaveSRSSG(Base, MicrowaveInterface):
         return self.on()
 
     def set_list(self, frequency=None, power=None):
+
         """ Sets the MW mode to list mode
 
         @param list freq: list of frequencies in Hz
@@ -332,7 +331,6 @@ class MicrowaveSRSSG(Base, MicrowaveInterface):
 
         @return int: error code (0:OK, -1:error)
         """
-
         self._write('LSTR')
         return 0
 
@@ -370,6 +368,7 @@ class MicrowaveSRSSG(Base, MicrowaveInterface):
         return start, stop, step, power, self._internal_mode
 
     def reset_sweeppos(self):
+
         """ Reset of MW sweep position to start
 
         @return int: error code (0:OK, -1:error)
@@ -377,7 +376,6 @@ class MicrowaveSRSSG(Base, MicrowaveInterface):
         self._internal_mode = 'sweep'
         self.log.error('This was never tested!')
         return self.reset_listpos()
-
 
     def set_ext_trigger(self, pol=TriggerEdge.RISING):
         """ Set the external trigger for this device with proper polarization.
@@ -473,5 +471,3 @@ class MicrowaveSRSSG(Base, MicrowaveInterface):
         self._write('*RST')
         self._write('ENBR 0')   # turn off Type N output
         self._write('ENBL 0')   # turn off BNC output
-
-

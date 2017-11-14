@@ -346,7 +346,7 @@ class MagnetControlLogic(GenericLogic):
             self._magnetstage.move_relative(2, self.step_y)
             time.sleep(self.motion_time+0.1)
             self.curr_y_pos = float(self._magnetstage.get_current_position(2)[3:-2])
-            time.sleep(0.2)
+            time.sleep(0.1)
             if self.curr_y_pos > (self.y_end+self.step_y):
                 self.stopRequested = False
                 self._magnetstage.stop_motion(2)

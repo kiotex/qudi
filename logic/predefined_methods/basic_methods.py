@@ -110,7 +110,7 @@ def generate_laser_mw_on(self, name='Laser_MW_On', laser_amp=2.0, mw_channel='a_
     # put block in a list with repetitions
     block_list = [(block, 0)]
     # create ensemble out of the block(s)
-    block_ensemble = PulseBlockEnsemble(name=name, block_list=block_list, rotating_frame=False)
+    block_ensemble = PulseBlockEnsemble(name=name, block_list=block_list, rotating_frame=True)
     # add metadata to invoke settings later on
     block_ensemble.sample_rate = self.sample_rate
     block_ensemble.activation_config = self.activation_config
@@ -357,7 +357,7 @@ def generate_ramsey(self, name='ramsey', rabi_period=1.0e-6, mw_freq=2870.0e6, m
         block_list.append((seq_block, 0))
 
     # create ensemble out of the block(s)
-    block_ensemble = PulseBlockEnsemble(name=name, block_list=block_list, rotating_frame=False)
+    block_ensemble = PulseBlockEnsemble(name=name, block_list=block_list, rotating_frame=True)
 
     # add metadata to invoke settings later on
     block_ensemble.sample_rate = self.sample_rate
@@ -450,7 +450,7 @@ def generate_Hahn_echo(self, name='hahn_echo', rabi_period=200e-9, mw_freq=100.0
         block_list.append((seq_block, 0))
 
     # create ensemble out of the block(s)
-    block_ensemble = PulseBlockEnsemble(name=name, block_list=block_list, rotating_frame=False)
+    block_ensemble = PulseBlockEnsemble(name=name, block_list=block_list, rotating_frame=True)
     # add metadata to invoke settings later on
     block_ensemble.sample_rate = self.sample_rate
     block_ensemble.activation_config = self.activation_config
@@ -532,7 +532,7 @@ def generate_T1_waveform(self, name='T1', rabi_period=200e-9, mw_freq=100.0e6, m
         block_list.append((seq_block, 0))
 
     # create ensemble out of the block(s)
-    block_ensemble = PulseBlockEnsemble(name=name, block_list=block_list, rotating_frame=False)
+    block_ensemble = PulseBlockEnsemble(name=name, block_list=block_list, rotating_frame=True)
     # add metadata to invoke settings later on
     block_ensemble.sample_rate = self.sample_rate
     block_ensemble.activation_config = self.activation_config
@@ -608,7 +608,7 @@ def generate_T1_sequence(self, name='T1 sequence', rabi_period=200e-9, mw_freq=1
 
         mainsequence_list.extend(subsequence_list)
 
-    sequence = PulseSequence(name = name, ensemble_param_list = mainsequence_list, rotating_frame=False)
+    sequence = PulseSequence(name = name, ensemble_param_list = mainsequence_list, rotating_frame=True)
 
     sequence.sample_rate = self.sample_rate
     sequence.activation_config = self.activation_config
@@ -980,7 +980,7 @@ def waveform(self, block_name, waveform_name, repetitions = 0):
     block_list = [(block, repetitions)]
 
     # create ensemble out of the block(s)
-    block_ensemble = PulseBlockEnsemble(name=waveform_name, block_list=block_list, rotating_frame=False)
+    block_ensemble = PulseBlockEnsemble(name=waveform_name, block_list=block_list, rotating_frame=True)
     # add metadata to invoke settings later on
     block_ensemble.sample_rate = self.sample_rate
     block_ensemble.activation_config = self.activation_config

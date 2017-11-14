@@ -301,29 +301,72 @@ class AWG5014C(Base, PulserInterface):
                 upload_names.append(filename)
 
         # upload files
-        for name in upload_names:
-            self._send_file(name)
-        return 0
-
-    def _send_file(self, filename):
-        """ Sends an already hardware specific waveform file to the pulse
-            generators waveform directory.
-
-        @param string filename: The file name of the source file
-
-        @return int: error code (0:OK, -1:error)
-
-        Unused for digital pulse generators without sequence storage capability
-        (PulseBlaster, FPGA).
-        """
-
-        filepath = os.path.join(self.host_waveform_directory, filename)
-
         with FTP(self.ip_address) as ftp:
             ftp.login('user', 'pass') # login as default user anonymous, passwd anonymous@
             # ftp.cwd(self.asset_directory)
-            with open(filepath, 'rb') as uploaded_file:
-                ftp.storbinary('STOR '+filename, uploaded_file)
+            for filename in upload_names:
+                filepath = os.path.join(self.host_waveform_directory, filename)
+                with open(filepath, 'rb') as uploaded_file:
+                        ftp.storbinary('STOR '+filename, uploaded_file)
+            return 0
+
+    # def upload_asset(self, asset_name=None):
+    #     """ Upload an already hardware conform file to the device.
+    #     Does NOT load into channels.
+    #
+    #     @param str name: name of the ensemble/sequence to be uploaded
+    #
+    #     @return int: error code (0:OK, -1:error)
+    #
+    #     If nothing is passed, method will be skipped.
+    #     """
+    #
+    #     if asset_name is None:
+    #         self.log.warning('No asset name provided for upload!\nCorrect '
+    #                 'that!\nCommand will be ignored.')
+    #         return -1
+    #
+    #     # at first delete all the name, which might lead to confusions in the
+    #     # upload procedure:
+    #     self.delete_asset(asset_name)
+    #
+    #     # create list of filenames to be uploaded
+    #     upload_names = []
+    #     filelist = os.listdir(self.host_waveform_directory)
+    #     for filename in filelist:
+    #
+    #         is_wfm = filename.endswith('.wfm')
+    #
+    #         if is_wfm and (asset_name + '_ch') in filename:
+    #             upload_names.append(filename)
+    #
+    #         if (asset_name + '.seq') in filename:
+    #             upload_names.append(filename)
+    #
+    #     # upload files
+    #     for name in upload_names:
+    #         self._send_file(name)
+    #     return 0
+    #
+    # def _send_file(self, filename):
+    #     """ Sends an already hardware specific waveform file to the pulse
+    #         generators waveform directory.
+    #
+    #     @param string filename: The file name of the source file
+    #
+    #     @return int: error code (0:OK, -1:error)
+    #
+    #     Unused for digital pulse generators without sequence storage capability
+    #     (PulseBlaster, FPGA).
+    #     """
+    #
+    #     filepath = os.path.join(self.host_waveform_directory, filename)
+    #
+    #     with FTP(self.ip_address) as ftp:
+    #         ftp.login('user', 'pass') # login as default user anonymous, passwd anonymous@
+    #         # ftp.cwd(self.asset_directory)
+    #         with open(filepath, 'rb') as uploaded_file:
+    #             ftp.storbinary('STOR '+filename, uploaded_file)
 
     def load_asset(self, asset_name, load_dict=None):
         """ Loads a sequence or waveform to the specified channel of the pulsing

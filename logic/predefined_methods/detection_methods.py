@@ -103,7 +103,7 @@ def generate_KDDxy_sequence(self, name='KDDxy_sequence', rabi_period=200e-9, mw_
         subsequence_list = []
 
         # get tau half element
-        tauhalf_element = self._get_idle_element(t / 2 - 3 * rabi_period / 8, 0.0, False, gate_count_channel)
+        tauhalf_element = self._get_idle_element(t/2 - rabi_period/4, 0.0, False, gate_count_channel)
 
         # get tau element
         tau_element = self._get_idle_element(t - rabi_period / 2, 0.0, False, gate_count_channel)
@@ -366,7 +366,7 @@ def generate_XY8_sequence(self, name='XY8_sequence', rabi_period=200e-9, mw_freq
         subsequence_list = []
 
         # get tau half element
-        tauhalf_element = self._get_idle_element(t/2 - 3*rabi_period/8, 0.0, False, gate_count_channel)
+        tauhalf_element = self._get_idle_element(t/2 - rabi_period/4, 0.0, False, gate_count_channel)
 
         # get tau element
         tau_element = self._get_idle_element(t - rabi_period/2, 0.0, False, gate_count_channel)
@@ -451,7 +451,7 @@ def generate_XY8_freq(self, name='XY8_freq', rabi_period=1.0e-6, mw_freq=0.1e+9,
     tau_array = 1 / (2 * freq_array)
     # calculate "real" tau and tauhalf arrays
     real_tau_array = tau_array - rabi_period / 2
-    real_tauhalf_array = tau_array / 2 - 3 * rabi_period / 8
+    real_tauhalf_array = tau_array / 2 - rabi_period / 4
     if True in (real_tau_array < 0.0) or True in (real_tauhalf_array < 0.0):
         self.log.error('XY8 generation failed! Rabi period of {0:.3e} s is too long for start tau '
                        'of {1:.3e} s.'.format(rabi_period, real_tau_array[0]))
@@ -599,21 +599,19 @@ def generate_XY16_sequence(self, name='XY16_sequence', rabi_period=200e-9, mw_fr
 
     # get pihalf element
     pihalf_element = self._get_mw_element(rabi_period/4, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0, gate_count_channel)
-    pihalf = waveform(self, [pihalf_element], 'PI_HALF')
-
     # get pi_x element
     pi_x_element = self._get_mw_element(rabi_period/2, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0, gate_count_channel)
-    pi_x = waveform(self, [pi_x_element], 'PI_X')
-
     # get pi_y element
     pi_y_element = self._get_mw_element(rabi_period/2, 0.0, mw_channel, False, mw_amp, mw_freq, 90.0, gate_count_channel)
-    pi_y = waveform(self, [pi_y_element], 'PI_Y')
-
+    # get pi_minus_x element
+    pi_minus_x_element = self._get_mw_element(rabi_period / 2, 0.0, mw_channel, False, mw_amp, mw_freq, 180.0,
+                                        gate_count_channel)
+    # get pi_minus_y element
+    pi_minus_y_element = self._get_mw_element(rabi_period / 2, 0.0, mw_channel, False, mw_amp, mw_freq, 270.0,
+                                        gate_count_channel)
     # get -x pihalf (3pihalf) element
     pi3half_element = self._get_mw_element(rabi_period/4, 0.0, mw_channel, False, mw_amp,
                                            mw_freq, 180., gate_count_channel)
-    pi3half = waveform(self, [pi3half_element], 'PI_3_HALF')
-
     # Create sequence
     mainsequence_list = []
     i = 0
@@ -622,7 +620,7 @@ def generate_XY16_sequence(self, name='XY16_sequence', rabi_period=200e-9, mw_fr
         subsequence_list = []
 
         # get tau half element
-        tauhalf_element = self._get_idle_element(t/2 - 3*rabi_period/8, 0.0, False, gate_count_channel)
+        tauhalf_element = self._get_idle_element(t/2 - rabi_period/4, 0.0, False, gate_count_channel)
 
         # get tau element
         tau_element = self._get_idle_element(t - rabi_period/2, 0.0, False, gate_count_channel)
@@ -631,26 +629,26 @@ def generate_XY16_sequence(self, name='XY16_sequence', rabi_period=200e-9, mw_fr
         prep = waveform(self, [pihalf_element, tauhalf_element], name1)
 
         wfm_list=[]
-        name2 = 'XY8_%02i' % i
+        name2 = 'XY16_%02i' % i
 
         for j in range(xy8_order-1):
             wfm_list.extend([pi_x_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
                              pi_y_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
-                             pi_y_element, tau_element, pi_x_element, tau_element, pi_x_element, tau_element,
-                             pi_y_element, tau_element, pi_x_element,tau_element, pi_y_element, tau_element,
-                             pi_y_element, tau_element, pi_x_element, tau_element, pi_y_element, tau_element,
-                             pi_x_element, tau_element])
+                             pi_y_element, tau_element, pi_x_element, tau_element, pi_minus_x_element, tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element,tau_element, pi_minus_y_element, tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element, tau_element, pi_minus_y_element, tau_element,
+                             pi_minus_x_element, tau_element])
 
         decoupling = waveform(self, wfm_list, name2)
 
-        name3 = 'last_dec_%02i' % i
+        name3 = '16ld_%02i' % i
         last = waveform(self,
                         [pi_x_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
                              pi_y_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
-                             pi_y_element, tau_element, pi_x_element, tau_element, pi_x_element, tau_element,
-                             pi_y_element, tau_element, pi_x_element,tau_element, pi_y_element, tau_element,
-                             pi_y_element, tau_element, pi_x_element, tau_element, pi_y_element, tau_element,
-                             pi_x_element, tauhalf_element, pihalf_element], name3)
+                             pi_y_element, tau_element, pi_x_element, tau_element, pi_minus_x_element, tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element,tau_element, pi_minus_y_element, tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element, tau_element, pi_minus_y_element, tau_element,
+                             pi_minus_x_element, tauhalf_element, pihalf_element], name3)
 
         subsequence_list.append((prep, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
         subsequence_list.append((decoupling, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
@@ -658,14 +656,14 @@ def generate_XY16_sequence(self, name='XY16_sequence', rabi_period=200e-9, mw_fr
         subsequence_list.append((readout, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
 
         if alternating:
-            name4 = 'last2_dec_%02i' % i
+            name4 = '16ld2_%02i' % i
             last2 = waveform(self,
                             [pi_x_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
                              pi_y_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
-                             pi_y_element, tau_element, pi_x_element, tau_element, pi_x_element, tau_element,
-                             pi_y_element, tau_element, pi_x_element,tau_element, pi_y_element, tau_element,
-                             pi_y_element, tau_element, pi_x_element, tau_element, pi_y_element, tau_element,
-                             pi_x_element, tauhalf_element, pi3half_element], name4)
+                             pi_y_element, tau_element, pi_x_element, tau_element, pi_minus_x_element, tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element,tau_element, pi_minus_y_element, tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element, tau_element, pi_minus_y_element, tau_element,
+                             pi_minus_x_element, tauhalf_element, pi3half_element], name4)
 
             subsequence_list.append((prep, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
             subsequence_list.append((decoupling, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
@@ -688,6 +686,7 @@ def generate_XY16_sequence(self, name='XY16_sequence', rabi_period=200e-9, mw_fr
     self.save_sequence(name, sequence)
     print(sequence)
     return sequence
+
 ####################################################################################################
 #                                   Helper methods                                              ####
 ####################################################################################################

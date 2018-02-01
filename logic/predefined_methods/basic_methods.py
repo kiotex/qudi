@@ -588,22 +588,15 @@ def generate_T1_sequence(self, name='T1 sequence', rabi_period=200e-9, mw_freq=1
         # get tau element
         tau_element1 = self._get_idle_element(t-rabi_period/2, 0.0, False, gate_count_channel)
         name1 = 'EVO1_X%04i' % i
-        evo1 = waveform(self, [tau_element1], name1)
+        evo1 = waveform(self, [pi_element, tau_element1, pi_element, laser_element, delay_element, waiting_element], name1)
 
-        subsequence_list.append((flip, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
         subsequence_list.append((evo1, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
-        subsequence_list.append((flip, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
-        subsequence_list.append((readout, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
 
         # get tau element
         tau_element2 = self._get_idle_element(t - rabi_period/4, 0.0, False, gate_count_channel)
         name2 = 'EVO2_X%04i' % i
-        evo2 = waveform(self, [tau_element2], name2)
-
-        subsequence_list.append((flip, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+        evo2 = waveform(self, [flip, tau_element2, laser_element, delay_element, waiting_element], name2)
         subsequence_list.append((evo2, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
-        subsequence_list.append((readout, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
-
         i=i+1
 
         mainsequence_list.extend(subsequence_list)

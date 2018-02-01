@@ -697,6 +697,8 @@ class PulsedMeasurementLogic(GenericLogic):
         #FIXME: Describe the idea of how the measurement is intended to be run
         #       and how the used thread principle was used in this method (or
         #       will be use in another method).
+
+        self.single_sweep_data=np.zeros(shape=(1, 120))
         self.sigMeasurementRunningUpdated.emit(True, False)
         if self.show_laser_index > self.number_of_lasers:
             self.set_laser_to_show(0, self.show_raw_data)
@@ -806,6 +808,7 @@ class PulsedMeasurementLogic(GenericLogic):
                 else:
                     self.signal_plot_y = tmp_signal
                     self.measuring_error_plot_y = tmp_error
+                    # self.single_sweep_data = np.vstack((self.single_sweep_data, tmp_signal))
 
                 # set laser to show
                 self.set_laser_to_show(self.show_laser_index, self.show_raw_data)
@@ -1265,6 +1268,29 @@ class PulsedMeasurementLogic(GenericLogic):
                                    parameters=parameters, fmt='%d',
                                    filepath=filepath, filelabel=filelabel,
                                    delimiter='\t')
+        # return filepath
+
+        #####################################################################
+        ####                Save every sweep data                        ####
+        #####################################################################
+
+        # if tag is not None and len(tag) > 0:
+        #     filelabel = tag + '_every_sweep'
+        # else:
+        #     filelabel = 'every_sweep'
+        #
+        # # prepare the data in a dict or in an OrderedDict:
+        #
+        # data = OrderedDict()
+        # single_sweep = self.single_sweep_data.astype(float)
+        # data['single_sweeps'] = single_sweep
+        # # write the parameters:
+        # parameters = OrderedDict()
+        # parameters['Is counter gated?'] = self.fast_counter_gated
+        # self._save_logic.save_data(data, timestamp=timestamp,
+        #                            parameters=parameters, fmt='%0.3f',
+        #                            filepath=filepath, filelabel=filelabel,
+        #                            delimiter='\t')
         return filepath
 
     def _compute_fft(self):

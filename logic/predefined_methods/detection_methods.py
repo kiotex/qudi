@@ -595,6 +595,134 @@ def generate_XY16_sequence(self, name='XY16_sequence', rabi_period=200e-9, mw_fr
     waiting_element = self._get_idle_element(wait_time, 0.0, False, gate_count_channel)
     # get laser and delay element
     laser_element, delay_element = self._get_laser_element(laser_length, 0.0, False, delay_length, channel_amp, gate_count_channel)
+    # readout = waveform(self, [laser_element, delay_element, waiting_element], 'READOUT')
+
+    # get pihalf element
+    pihalf_element = self._get_mw_element(rabi_period/4, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0, gate_count_channel)
+    # get pi_x element
+    pi_x_element = self._get_mw_element(rabi_period/2, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0, gate_count_channel)
+    # get pi_y element
+    pi_y_element = self._get_mw_element(rabi_period/2, 0.0, mw_channel, False, mw_amp, mw_freq, 90.0, gate_count_channel)
+    # get pi_minus_x element
+    pi_minus_x_element = self._get_mw_element(rabi_period / 2, 0.0, mw_channel, False, mw_amp, mw_freq, 180.0,
+                                        gate_count_channel)
+    # get pi_minus_y element
+    pi_minus_y_element = self._get_mw_element(rabi_period / 2, 0.0, mw_channel, False, mw_amp, mw_freq, 270.0,
+                                        gate_count_channel)
+    # get -x pihalf (3pihalf) element
+    pi3half_element = self._get_mw_element(rabi_period/4, 0.0, mw_channel, False, mw_amp,
+                                           mw_freq, 180., gate_count_channel)
+    # Create sequence
+    mainsequence_list = []
+    i = 0
+
+    for t in tau_array:
+        subsequence_list = []
+
+        # get tau half element
+        tauhalf_element = self._get_idle_element(t/2 - rabi_period/4, 0.0, False, gate_count_channel)
+
+        # get tau element
+        tau_element = self._get_idle_element(t - rabi_period/2, 0.0, False, gate_count_channel)
+
+        wfm_list = []
+        wfm_list.extend([pihalf_element, tauhalf_element])
+
+        for j in range(xy8_order-1):
+            wfm_list.extend([pi_x_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
+                             pi_y_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
+                             pi_y_element, tau_element, pi_x_element, tau_element, pi_minus_x_element, tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element,tau_element, pi_minus_y_element, tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element, tau_element, pi_minus_y_element, tau_element,
+                             pi_minus_x_element, tau_element])
+
+        wfm_list.extend([pi_x_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
+                             pi_y_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
+                             pi_y_element, tau_element, pi_x_element, tau_element, pi_minus_x_element, tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element,tau_element, pi_minus_y_element, tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element, tau_element, pi_minus_y_element, tau_element,
+                             pi_minus_x_element, tauhalf_element, pihalf_element])
+
+        wfm_list.extend([laser_element, delay_element, waiting_element])
+
+        name1 = 'XY16u_%02i' % i
+        decoupling = waveform(self, wfm_list, name1)
+        subsequence_list.append((decoupling, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+
+        if alternating:
+            wfm_list2 = []
+            wfm_list2.extend([pihalf_element, tauhalf_element])
+
+            for j in range(xy8_order - 1):
+                wfm_list2.extend([pi_x_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
+                                 pi_y_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
+                                 pi_y_element, tau_element, pi_x_element, tau_element, pi_minus_x_element, tau_element,
+                                 pi_minus_y_element, tau_element, pi_minus_x_element, tau_element, pi_minus_y_element,
+                                 tau_element,
+                                 pi_minus_y_element, tau_element, pi_minus_x_element, tau_element, pi_minus_y_element,
+                                 tau_element,
+                                 pi_minus_x_element, tau_element])
+
+            wfm_list2.extend([pi_x_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
+                             pi_y_element, tau_element, pi_y_element, tau_element, pi_x_element, tau_element,
+                             pi_y_element, tau_element, pi_x_element, tau_element, pi_minus_x_element, tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element, tau_element, pi_minus_y_element,
+                             tau_element,
+                             pi_minus_y_element, tau_element, pi_minus_x_element, tau_element, pi_minus_y_element,
+                             tau_element,
+                             pi_minus_x_element, tauhalf_element, pi3half_element])
+
+            wfm_list2.extend([laser_element, delay_element, waiting_element])
+
+            name2 = 'XY16d_%02i' % i
+            decoupling2 = waveform(self, wfm_list2, name2)
+            subsequence_list.append((decoupling2, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+
+        i = i + 1
+
+        mainsequence_list.extend(subsequence_list)
+
+    sequence = PulseSequence(name=name, ensemble_param_list=mainsequence_list, rotating_frame=True)
+
+    sequence.sample_rate = self.sample_rate
+    sequence.activation_config = self.activation_config
+    sequence.amplitude_dict = self.amplitude_dict
+    sequence.laser_channel = self.laser_channel
+    sequence.alternating = True
+    sequence.laser_ignore_list = []
+
+    self.save_sequence(name, sequence)
+    print(sequence)
+    return sequence
+
+def generate_XY16_long_sequence(self, name='XY16_long_seq', rabi_period=200e-9, mw_freq=100e+6, mw_amp=0.25,
+                          start_tau=200.0e-9, incr_tau=1.0e-9, num_of_points=20, xy8_order=4,
+                          mw_channel='a_ch1', laser_length=3.0e-6, channel_amp=1.0, delay_length=0.7e-6,
+                          wait_time=1.0e-6, sync_trig_channel='', gate_count_channel='d_ch2',
+                          alternating=True):
+
+    """
+    generates XY16 decoupling sequence
+    """
+    # Sanity checks
+    if gate_count_channel == '':
+        gate_count_channel = None
+    if sync_trig_channel == '':
+        sync_trig_channel = None
+    err_code = self._do_channel_sanity_checks(mw_channel=mw_channel,
+                                              gate_count_channel=gate_count_channel,
+                                              sync_trig_channel=sync_trig_channel)
+    if err_code != 0:
+        return
+
+    # get tau array for measurement ticks
+    tau_array = start_tau + np.arange(num_of_points) * incr_tau
+
+    # create the static waveform elements
+    # get waiting element
+    waiting_element = self._get_idle_element(wait_time, 0.0, False, gate_count_channel)
+    # get laser and delay element
+    laser_element, delay_element = self._get_laser_element(laser_length, 0.0, False, delay_length, channel_amp, gate_count_channel)
     readout = waveform(self, [laser_element, delay_element, waiting_element], 'READOUT')
 
     # get pihalf element

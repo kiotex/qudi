@@ -23,6 +23,9 @@ import numpy as np
 import os
 import pyqtgraph as pg
 import time
+from numpy import trapz
+from scipy.fftpack import fft
+from scipy.optimize import leastsq
 
 from core.module import Connector, ConfigOption, StatusVar
 from gui.guibase import GUIBase
@@ -50,22 +53,6 @@ class App(QtWidgets.QDialog):
         self.width = 640
         self.height = 480
 
-    # def openFileNamesDialog(self):
-    #     options = QFileDialog.Options()
-    #     options |= QFileDialog.DontUseNativeDialog
-    #     files, _ = QFileDialog.getOpenFileNames(self, "QFileDialog.getOpenFileNames()", "",
-    #                                             "All Files (*.dat);;Python Files (*.txt)", options=options)
-    #     if files:
-    #         print(files)
-    #
-    # def saveFileDialog(self):
-    #     options = QFileDialog.Options()
-    #     options |= QFileDialog.DontUseNativeDialog
-    #     fileName, _ = QFileDialog.getSaveFileName(self, "QFileDialog.getSaveFileName()", "",
-    #                                               "All Files (*);;Text Files (*.txt)", options=options)
-    #     if fileName:
-    #         print(fileName)
-
 class NVdepthMainWindow(QtWidgets.QMainWindow):
 
     """ Create the Mainwindow based on the corresponding *.ui file. """
@@ -82,11 +69,7 @@ class NVdepthMainWindow(QtWidgets.QMainWindow):
         uic.loadUi(ui_file, self)
         self.show()
 
-    # def keyPressEvent(self, event):
-    #     """Pass the keyboard press event from the main window further. """
-    #     self.sigPressKeyBoard.emit(event)
-
-class NVdepthControlGui(GUIBase):
+class NVdepthGui(GUIBase):
 
     """ Class for the alignment of the magnetic field.
     """
@@ -115,124 +98,29 @@ class NVdepthControlGui(GUIBase):
 
         self._mw.actionOpen.triggered.connect(self.open_file)
 
-        # # Get the image from the logic
-        # self.imageX = pg.PlotDataItem(self._magnet_logic.fluor_plot_x,
-        #                               self._magnet_logic.fluor_plot_y,
-        #                              pen=pg.mkPen(palette.c1, style=QtCore.Qt.DotLine),
-        #                              symbol='o',
-        #                              symbolPen=palette.c1,
-        #                              symbolBrush=palette.c1,
-        #                              symbolSize=7)
-        #
-        # self.imageY = pg.PlotDataItem(self._magnet_logic.yfluor_plot_x,
-        #                               self._magnet_logic.yfluor_plot_y,
-        #                               pen=pg.mkPen(palette.c1, style=QtCore.Qt.DotLine),
-        #                               symbol='o',
-        #                               symbolPen=palette.c1,
-        #                               symbolBrush=palette.c1,
-        #                               symbolSize=7)
-        #
-        # self.fluor_x_fit_image = pg.PlotDataItem(self._magnet_logic.x_scan_fit_x,
-        #                                       self._magnet_logic.x_scan_fit_y,
-        #                                       pen=pg.mkPen(palette.c2))
-        # self.fluor_y_fit_image = pg.PlotDataItem(self._magnet_logic.y_scan_fit_x,
-        #                                          self._magnet_logic.y_scan_fit_y,
-        #                                          pen=pg.mkPen(palette.c2))
-        #
-        # # Add the display item to the X_scan and Y_scan, which were defined in the UI file.
-        # self._mw.X_scan.addItem(self.imageX)
-        # self._mw.X_scan.setLabel(axis='left', text='Counts', units='Counts/s')
-        # self._mw.X_scan.setLabel(axis='bottom', text='X axis', units='mm')
-        # self._mw.X_scan.showGrid(x=True, y=True, alpha=0.8)
-        #
-        # self._mw.Y_scan.addItem(self.imageY)
-        # self._mw.Y_scan.setLabel(axis='left', text='Counts', units='Counts/s')
-        # self._mw.Y_scan.setLabel(axis='bottom', text='X axis', units='mm')
-        # self._mw.Y_scan.showGrid(x=True, y=True, alpha=0.8)
-        #
-        # ########################################################################
-        # #          Configuration of the various display Widgets                #
-        # ########################################################################
-        # # Take the default values from logic:
-        # self._mw.x_start.setValue(self._magnet_logic.x_start)
-        # self._mw.x_end.setValue(self._magnet_logic.x_end)
-        # self._mw.step_x.setValue(self._magnet_logic.step_x)
-        #
-        # self._mw.y_start.setValue(self._magnet_logic.y_start)
-        # self._mw.y_end.setValue(self._magnet_logic.y_end)
-        # self._mw.step_y.setValue(self._magnet_logic.step_y)
-        #
-        # self._mw.acq_time.setValue(self._magnet_logic.fluorescence_integration_time)
-        # self._mw.N_AF_points.setValue(self._magnet_logic.N_AF_points)
-        #
-        # self._mw.set_x_pos.setValue(self._magnet_logic.set_x_pos)
-        # self._mw.set_y_pos.setValue(self._magnet_logic.set_y_pos)
-        # self._mw.set_z_pos.setValue(self._magnet_logic.set_z_pos)
-        #
-        # # fit settings
-        # self._fsd = FitSettingsDialog(self._magnet_logic.fc)
-        # self._fsd.sigFitsUpdated.connect(self._mw.fit_methods_ComboBox.setFitFunctions)
-        # self._fsd.sigFitsUpdated.connect(self._mw.fit_methods_ComboBox_2.setFitFunctions)
-        # self._fsd.applySettings()
-        # self._mw.action_FitSettings.triggered.connect(self._fsd.show)
-        #
-        # ########################################################################
-        # #                       Connect signals                                #
-        # ########################################################################
-        # # Internal user input changed signals
-        # self._mw.x_start.editingFinished.connect(self.change_x_start)
-        # self._mw.x_end.editingFinished.connect(self.change_x_end)
-        # self._mw.step_x.editingFinished.connect(self.change_step_x)
-        #
-        # self._mw.y_start.editingFinished.connect(self.change_y_start)
-        # self._mw.y_end.editingFinished.connect(self.change_y_end)
-        # self._mw.step_y.editingFinished.connect(self.change_step_y)
-        #
-        # self._mw.acq_time.editingFinished.connect(self.change_acq_time)
-        # self._mw.N_AF_points.editingFinished.connect(self.change_N_AF_points)
-        #
-        # self._mw.set_x_pos.editingFinished.connect(self.change_set_x_pos)
-        # self._mw.set_y_pos.editingFinished.connect(self.change_set_y_pos)
-        # self._mw.set_z_pos.editingFinished.connect(self.change_set_z_pos)
-        #
+        self.time = np.zeros(1)
+        self.counts1 = np.zeros(1)
+        self.error1 = np.zeros(1)
+        self.counts2 = np.zeros(1)
+        self.error2 = np.zeros(1)
+
+        self._mw.sequence_order.editingFinished.connect(self.redraw_normalized_plot)
+        self._mw.contrast.editingFinished.connect(self.redraw_normalized_plot)
+
+        self._mw.n_FFT.setMaximum(3.0e+06)
+        self._mw.n_FFT.setValue(2.0e+06)
+
+        self._mw.g.setMaximum(5e+5)
+        self._mw.g.setValue(5.0e+3)
+
+        self._mw.a.setMaximum(50.0e-12)
+        self._mw.a.setValue(9.4e-14)
+
+        self._mw.calculate_filter_function.clicked.connect(self._filter_function_button_fired)
+        self._mw.calculate_ns.clicked.connect(self._calculate_noise_spectrum_button_fired)
+        self._mw.calculate_depth.clicked.connect(self._distance_to_NV_button_fired)
+
         # self._mw.do_x_fit_PushButton.clicked.connect(self.do_x_fit)
-        # self.sigDoXFit.connect(self._magnet_logic.do_x_fit, QtCore.Qt.QueuedConnection)
-        # self._magnet_logic.sigFitXUpdated.connect(self.update_x_fit, QtCore.Qt.QueuedConnection)
-        #
-        # self._mw.do_y_fit_PushButton.clicked.connect(self.do_y_fit)
-        # self.sigDoYFit.connect(self._magnet_logic.do_y_fit, QtCore.Qt.QueuedConnection)
-        # self._magnet_logic.sigFitYUpdated.connect(self.update_y_fit, QtCore.Qt.QueuedConnection)
-        #
-        # #################################################################
-        # #                           Actions                             #
-        # #################################################################
-        # # Connect the scan actions to the events if they are clicked. Connect
-        # # also the adjustment of the displayed windows.
-        # self._mw.action_stop_scanning.triggered.connect(self.ready_clicked)
-        #
-        # self._scan_x_start_proxy = pg.SignalProxy(
-        #     self._mw.action_scan_x_start.triggered,
-        #     delay=0.1,
-        #     slot=self.x_scan_clicked
-        # )
-        #
-        # self._scan_y_start_proxy = pg.SignalProxy(
-        #     self._mw.action_scan_y_start.triggered,
-        #     delay=0.1,
-        #     slot=self.y_scan_clicked
-        # )
-        #
-        # self._magnet_logic.sigPlotXUpdated.connect(self.update_x_plot, QtCore.Qt.QueuedConnection)
-        # self._magnet_logic.sigPlotYUpdated.connect(self.update_y_plot, QtCore.Qt.QueuedConnection)
-        # self._magnet_logic.sigPositionUpdated.connect(self.get_current_position)
-        #
-        # self._magnet_logic.signal_stop_scanning.connect(self.ready_clicked)
-        #
-        # self._mw.currposbutton.clicked.connect(self.get_current_position)
-        # self._mw.appl_pos_butt.clicked.connect(self.apply_position)
-        # self._mw.Set_pos_button.clicked.connect(self.set_position)
-        #
-        # self.get_current_position()
 
         return
 
@@ -300,6 +188,9 @@ class NVdepthControlGui(GUIBase):
         self.counts2 = np.zeros(len(a))
         self.error2 = np.zeros(len(a))
 
+        self._mw.data_plot.clear()
+        self._mw.processeddataplot.clear()
+
         for i in range(len(a)):
             self.time[i]=np.asarray(a[i].split(), dtype=np.float32)[0]
             self.counts1[i] = np.asarray(a[i].split(), dtype=np.float32)[1]
@@ -329,9 +220,16 @@ class NVdepthControlGui(GUIBase):
         self._mw.data_plot.setLabel(axis='bottom', text='time', units='ns')
         self._mw.data_plot.showGrid(x=True, y=True, alpha=0.8)
 
-        self.normalized_counts =np.abs(self.counts2-self.counts1)
+        self.baseline = np.sum(self.counts2+self.counts1)/len(self.counts2)/2
+        C0_up = self.baseline / (1 - 0.01 * self._mw.contrast.value() / 2)
+        C0_down = C0_up * (1 - 0.01 * self._mw.contrast.value())
+        counts = self.counts2 - self.counts1
 
-        self.normalized_image = pg.PlotDataItem(self.time * 1e+9,
+        self.T = self.time * 8 * self._mw.sequence_order.value()
+
+        self.normalized_counts = (counts) / (C0_up - C0_down)
+
+        self.normalized_image = pg.PlotDataItem(self.time,
                                            self.normalized_counts,
                                            pen=pg.mkPen(palette.c2, style=QtCore.Qt.DotLine),
                                            symbol='o',
@@ -341,270 +239,364 @@ class NVdepthControlGui(GUIBase):
 
         self._mw.processeddataplot.addItem(self.normalized_image)
         self._mw.processeddataplot.setLabel(axis='left', text='Counts', units='Counts/s')
-        self._mw.processeddataplot.setLabel(axis='bottom', text='time', units='ns')
+        self._mw.processeddataplot.setLabel(axis='bottom', text='time', units='s')
         self._mw.processeddataplot.showGrid(x=True, y=True, alpha=0.8)
 
+        self._filter_function_button_fired()
 
-        ############################################################################
-        #                           Change Methods                                 #
-        ############################################################################
+    def _calculate_noise_spectrum_button_fired(self):
 
-    # def change_x_start(self):
-    #     """ Update the starting position along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.x_start = self._mw.x_start.value()
-    #     return
-    #
-    # def change_x_end(self):
-    #     """ Update the final position along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.x_end = self._mw.x_end.value()
-    #     return
-    #
-    # def change_step_x(self):
-    #     """ Update step along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.step_x = self._mw.step_x.value()
-    #     if self._magnet_logic.x_start!=0 and self._magnet_logic.x_end!=0:
-    #         self._mw.n_x_points.setValue(len(np.arange(self._mw.x_start.value(), self._mw.x_end.value(), self._mw.step_x.value())))
-    #         self._magnet_logic.n_x_points = self._mw.n_x_points.value()
-    #     return
-    #
-    # def change_y_start(self):
-    #     """ Update the xy resolution in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.y_start = self._mw.y_start.value()
-    #     return
-    #
-    # def change_y_end(self):
-    #     """ Update the xy resolution in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.y_end = self._mw.y_end.value()
-    #     return
-    #
-    # def change_step_y(self):
-    #     """ Update the xy resolution in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.step_y = self._mw.step_y.value()
-    #     if self._magnet_logic.y_start!=0 and self._magnet_logic.y_end!=0:
-    #         self._mw.n_y_points.setValue(len(np.arange(self._mw.y_start.value(), self._mw.y_end.value(), self._mw.step_y.value())))
-    #         self._magnet_logic.n_y_points = self._mw.n_y_points.value()
-    #     return
-    #
-    # def change_acq_time(self):
-    #     """ Update the xy resolution in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.fluorescence_integration_time = self._mw.acq_time.value()
-    #     return
-    #
-    # def change_N_AF_points(self):
-    #     """ Update the xy resolution in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.N_AF_points = self._mw.N_AF_points.value()
-    #     return
-    #
-    # def change_set_x_pos(self):
-    #     """ Update the starting position along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.set_x_pos = self._mw.set_x_pos.value()
-    #
-    #     return
-    #
-    # def change_set_y_pos(self):
-    #     """ Update the final position along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.set_y_pos = self._mw.set_y_pos.value()
-    #     return
-    #
-    # def change_set_z_pos(self):
-    #     """ Update step along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.set_z_pos = self._mw.set_z_pos.value()
-    #     return
-    #
-    # def get_current_position(self):
-    #     """ Update current actuators position in the logic according to the GUI.
-    #             """
-    #     self._magnet_logic.get_current_position()
-    #     time.sleep(0.1)
-    #     self._mw.curr_x_pos.setValue(self._magnet_logic.curr_x_pos)
-    #     self._mw.curr_y_pos.setValue(self._magnet_logic.curr_y_pos)
-    #     self._mw.curr_z_pos.setValue(self._magnet_logic.curr_z_pos)
-    #
-    #     return
-    #
-    # def apply_position(self):
-    #     """ Update current actuators position in the logic according to the GUI.
-    #             """
-    #
-    #     self._mw.set_x_pos.setValue(self._mw.curr_x_pos.value())
-    #     self._mw.set_y_pos.setValue(self._mw.curr_y_pos.value())
-    #     self._mw.set_z_pos.setValue(self._mw.curr_z_pos.value())
-    #
-    #     self._magnet_logic.set_x_pos = self._mw.set_x_pos.value()
-    #     self._magnet_logic.set_y_pos = self._mw.set_y_pos.value()
-    #     self._magnet_logic.set_z_pos = self._mw.set_z_pos.value()
-    #     return
-    #
-    # def set_position(self):
-    #
-    #     self._magnet_logic.set_position()
-    #     return
-    #
-    # def x_scan_clicked(self):
-    #     """ Manages what happens if the xy scan is started. """
-    #     self.disable_scan_actions()
-    #     self._magnet_logic.start_x_scanning(tag='gui')
-    #
-    #
-    # def y_scan_clicked(self):
-    #     """ Manages what happens if the xy scan is started. """
-    #     self.disable_scan_actions()
-    #     self._magnet_logic.start_y_scanning(tag='gui')
-    #
-    # def disable_scan_actions(self):
-    #     """ Disables the buttons for scanning.
-    #     """
-    #     # Ensable the stop scanning button
-    #     self._mw.action_stop_scanning.setEnabled(True)
-    #
-    #     # Disable the start scan buttons
-    #     self._mw.action_scan_x_start.setEnabled(False)
-    #     self._mw.action_scan_y_start.setEnabled(False)
-    #
-    #     self._mw.set_x_pos.setEnabled(False)
-    #     self._mw.set_y_pos.setEnabled(False)
-    #     self._mw.set_z_pos.setEnabled(False)
-    #
-    #     self._mw.acq_time.setEnabled(False)
-    #
-    #     self._mw.x_start.setEnabled(False)
-    #     self._mw.x_end.setEnabled(False)
-    #     self._mw.step_x.setEnabled(False)
-    #
-    #     self._mw.y_start.setEnabled(False)
-    #     self._mw.y_end.setEnabled(False)
-    #     self._mw.step_y.setEnabled(False)
-    #
-    #     self._mw.N_AF_points.setEnabled(False)
-    #
-    # def enable_scan_actions(self):
-    #     """ Disables the buttons for scanning.
-    #     """
-    #     # Disable the start scan buttons
-    #     self._mw.action_scan_x_start.setEnabled(True)
-    #     self._mw.action_scan_y_start.setEnabled(True)
-    #
-    #     self._mw.set_x_pos.setEnabled(True)
-    #     self._mw.set_y_pos.setEnabled(True)
-    #     self._mw.set_z_pos.setEnabled(True)
-    #
-    #     self._mw.acq_time.setEnabled(True)
-    #
-    #     self._mw.x_start.setEnabled(True)
-    #     self._mw.x_end.setEnabled(True)
-    #     self._mw.step_x.setEnabled(True)
-    #
-    #     self._mw.y_start.setEnabled(True)
-    #     self._mw.y_end.setEnabled(True)
-    #     self._mw.step_y.setEnabled(True)
-    #
-    #     self._mw.N_AF_points.setEnabled(True)
-    #
-    # def ready_clicked(self):
-    #     """ Stopp the scan if the state has switched to ready. """
-    #     if self._magnet_logic.getState() == 'idle':
-    #         self._magnet_logic.stopRequested=True
-    #         self.enable_scan_actions()
-    #
-    # def update_x_plot(self, data_x, data_y):
-    #     """ Refresh the plot widgets with new data. """
-    #     # Update mean signal plot
-    #     self.imageX.setData(data_x, data_y)
-    #
-    # def update_y_plot(self, data_x, data_y):
-    #     """ Refresh the plot widgets with new data. """
-    #     # Update mean signal plot
-    #     self.imageY.setData(data_x, data_y)
-    #
-    # def do_x_fit(self):
-    #     fit_function  = self._mw.fit_methods_ComboBox.getCurrentFit()[0]
-    #     self.sigDoXFit.emit(fit_function)
-    #     return
-    #
-    # def do_y_fit(self):
-    #     fit_function  = self._mw.fit_methods_ComboBox.getCurrentFit()[0]
-    #     self.sigDoYFit.emit(fit_function)
-    #     return
-    #
-    # def update_x_fit(self, x_data, y_data, result_str_dict, current_fit):
-    #     """ Update the shown fit. """
-    #     if current_fit != 'No Fit':
-    #         # display results as formatted text
-    #         self._mw.x_fit_result.clear()
-    #         try:
-    #             formated_results = units.create_formatted_output(result_str_dict)
-    #         except:
-    #             formated_results = 'this fit does not return formatted results'
-    #         self._mw.x_fit_result.setPlainText(formated_results)
-    #
-    #     self._mw.fit_methods_ComboBox.blockSignals(True)
-    #     self._mw.fit_methods_ComboBox.setCurrentFit(current_fit)
-    #     self._mw.fit_methods_ComboBox.blockSignals(False)
-    #
-    #     # check which Fit method is used and remove or add again the
-    #     # odmr_fit_image, check also whether a odmr_fit_image already exists.
-    #     if current_fit != 'No Fit':
-    #         self.fluor_x_fit_image.setData(x=x_data, y=y_data)
-    #         if self.fluor_x_fit_image not in self._mw.X_scan.listDataItems():
-    #             self._mw.X_scan.addItem(self.fluor_x_fit_image)
-    #     else:
-    #         if self.fluor_x_fit_image in self._mw.X_scan.listDataItems():
-    #             self._mw.X_scan.removeItem(self.fluor_x_fit_image)
-    #
-    #     self._mw.X_scan.getViewBox().updateAutoRange()
-    #     return
-    #
-    # def update_y_fit(self, x_data, y_data, result_str_dict, current_fit):
-    #     """ Update the shown fit. """
-    #     if current_fit != 'No Fit':
-    #         # display results as formatted text
-    #         self._mw.y_fit_result.clear()
-    #         try:
-    #             formated_results = units.create_formatted_output(result_str_dict)
-    #         except:
-    #             formated_results = 'this fit does not return formatted results'
-    #         self._mw.y_fit_result.setPlainText(formated_results)
-    #
-    #     self._mw.fit_methods_ComboBox.blockSignals(True)
-    #     self._mw.fit_methods_ComboBox.setCurrentFit(current_fit)
-    #     self._mw.fit_methods_ComboBox.blockSignals(False)
-    #
-    #     # check which Fit method is used and remove or add again the
-    #     # odmr_fit_image, check also whether a odmr_fit_image already exists.
-    #     if current_fit != 'No Fit':
-    #         self.fluor_y_fit_image.setData(x=x_data, y=y_data)
-    #         if self.fluor_y_fit_image not in self._mw.Y_scan.listDataItems():
-    #             self._mw.Y_scan.addItem(self.fluor_y_fit_image)
-    #     else:
-    #         if self.fluor_y_fit_image in self._mw.Y_scan.listDataItems():
-    #             self._mw.Y_scan.removeItem(self.fluor_y_fit_image)
-    #
-    #     self._mw.Y_scan.getViewBox().updateAutoRange()
-    #     return
-    #
-    # def save_data(self):
-    #     """ Save the sum plot, the scan marix plot and the scan data """
-    #     filetag = self._mw.save_tag_LineEdit.text()
-    #     cb_range = self.get_matrix_cb_range()
-    #
-    #     # Percentile range is None, unless the percentile scaling is selected in GUI.
-    #     pcile_range = None
-    #     if self._mw.odmr_cb_centiles_RadioButton.isChecked():
-    #         low_centile = self._mw.odmr_cb_low_percentile_DoubleSpinBox.value()
-    #         high_centile = self._mw.odmr_cb_high_percentile_DoubleSpinBox.value()
-    #         pcile_range = [low_centile, high_centile]
-    #
-    #     self.sigSaveMeasurement.emit(filetag, cb_range, pcile_range)
-    #     return
-    #
+        # 0 approximation
+
+        x0 = 1 / (2 * self.time[np.argmin(self.normalized_counts)])
+
+        g0 = self._mw.g.value()
+        a0 = self._mw.a.value()
+
+        self._fourier_transform(self.time[0])
+
+        freq = self.FFx
+        d = self.FFx[1] - self.FFx[0]
+
+        delta = 0.05
+        FFx = np.zeros((len(self.time), len(freq)))
+        FFy = np.zeros((len(self.time), len(freq)))
+
+        for i in range(len(self.time)):
+            self._fourier_transform(self.time[i])  # now we have self.FFx and self.FFy
+            FFx[i][:] = self.FFx
+            FFy[i][:] = self.FFy ** 2
+
+        dif2 = 1
+        dif1 = 1
+        dif = 1
+        dif0 = 1
+
+        self.k = 0.0
+        self.b = 0.0
+
+        self.x0 = x0
+        self.g = g0
+        self.a = a0
+
+        # b=x0/5.0
+        k = 0.0
+        b = 0.0
+
+        # find background======================================================================================================================================================================================================
+
+        sequence = np.where(self.normalized_counts >= max(self.normalized_counts) * 0.9)[0]
+        uy = np.take(self.normalized_counts, sequence)
+
+        while True:  # optimize background
+
+            self.b = b
+            dif = dif1
+            dif2 = 1
+            k = 0
+            while True:
+                k = (k - 0.1) * 1e-8
+                SS = (k * freq + b) * 1e-18
+                dif1 = dif2
+                hi = []
+                for i in sequence:
+                    Int = trapz(SS * FFy[i][:], dx=d) * 1e+18  # integration
+                    hi.append(Int)
+                hi = [-x for x in hi]
+                cc = np.exp(hi)
+                dif2 = np.sqrt(sum((cc - uy) ** 2) / (len(uy) - 1))
+                if dif2 >= dif1:
+                    break
+            b = b + 0.001
+            self.k = k
+
+            if dif1 >= dif:
+                break
+
+        dif2 = 1
+        dif1 = 1
+        dif = 1
+
+        ux = np.linspace(x0 * 0.98, x0 * 1.02, 40)
+
+        x0 = 1 / (2 * self.time[np.argmin(self.normalized_counts)])
+        g = g0
+        a = a0
+        while True: # optimize the dip
+
+            self.g = g
+            a = a0
+            dif = dif1
+            while True:  # optimize amplitude
+                a = a * 1.1
+                S = (a / np.pi) * g / ((freq - x0) ** 2 + g ** 2) + (self.k * freq + self.b) * 1e-18
+                dif1 = dif2
+                hi = []
+                for i in range(len(self.time)):
+                    Int = trapz(S * FFy[i][:], dx=d) * 1e+18  # integration
+                    hi.append(Int)
+
+                hi = [-x for x in hi]
+                calculated_counts = np.exp(hi)
+
+                dif2 = np.sqrt(
+                    sum((calculated_counts - self.normalized_counts) ** 2) / (len(calculated_counts) - 1))
+                if dif2 >= dif1:
+                    break
+            self.a = a
+            dif2 = dif1
+            g = g - 200
+
+            if dif1 >= dif:
+                break
+
+        param = np.zeros((40))
+
+        for i in range(len(ux)):  # optimize position
+            S = (self.a / np.pi) * self.g / ((freq - ux[i]) ** 2 + self.g ** 2) + (self.k * freq + self.b) * 1e-18
+            hi = []
+            for j in range(len(self.time)):
+                Int = trapz(S * FFy[j][:], dx=d) * 1e+18  # integration
+                hi.append(Int)
+
+            hi = [-x for x in hi]
+
+            calculated_counts = np.exp(hi)
+            param[i] = np.std(calculated_counts - self.normalized_counts)
+        self.x0 = ux[np.argmin(param)]
+
+        dif2 = 1
+        dif1 = 1
+        dif = 1
+        g = g0
+        while True:
+            self.g = g
+            a = a0
+            dif = dif1
+            while True:  # optimize amplitude
+                a = a * 1.1
+                S = (a / np.pi) * g / ((freq - self.x0) ** 2 + g ** 2) + (self.k * freq + self.b) * 1e-18
+                dif1 = dif2
+                hi = []
+                for i in range(len(self.time)):
+                    Int = trapz(S * FFy[i][:], dx=d) * 1e+18  # integration
+                    hi.append(Int)
+                hi = [-x for x in hi]
+                calculated_counts = np.exp(hi)
+                dif2 = np.sqrt(
+                    sum((calculated_counts - self.normalized_counts) ** 2) / (len(calculated_counts) - 1))
+
+                if dif2 >= dif1:
+                    break
+
+            self.a = a
+            dif2 = dif1
+            g = g - 200
+
+            if dif1 >= dif:
+                break
+
+        self._show_calculation_button_fired()
+
+    def _show_calculation_button_fired(self):
+
+        d = self.FFx[1] - self.FFx[0]
+
+        FFx = np.zeros((len(self.time), len(self.FFx)))
+        FFy = np.zeros((len(self.time), len(self.FFx)))
+
+        for i in range(len(self.time)):
+            self._fourier_transform(self.time[i])  # now we have self.FFx and self.FFy
+            FFx[i][:] = self.FFx
+            FFy[i][:] = self.FFy ** 2
+
+        self._mw.a.setValue(self.a)
+        self._mw.g.setValue(self.g)
+
+        self.S = (self.a / np.pi) * self.g / ((self.FFx - self.x0) ** 2 + self.g ** 2) + (
+                                                                                         self.k * self.FFx + self.b) * 1e-18
+
+        self._mw.spin_noise_plot.clear()
+        self.noise_spectrum_image = pg.PlotDataItem(self.FFx,
+                                                    self.S * 1e18,
+                                                    pen=pg.mkPen(palette.c5, style=QtCore.Qt.DotLine),
+                                                    symbol='o',
+                                                    symbolPen=palette.c5,
+                                                    symbolBrush=palette.c5,
+                                                    symbolSize=7)
+
+        self._mw.spin_noise_plot.addItem(self.noise_spectrum_image)
+        self._mw.spin_noise_plot.setLabel(axis='left', text='Intensity', units='arb.u.')
+        self._mw.spin_noise_plot.setLabel(axis='bottom', text='Frequency', units='Hz')
+        self._mw.spin_noise_plot.showGrid(x=True, y=True, alpha=0.8)
+
+        hi = []
+        hi1 = []
+
+        for i in range(len(self.time)):
+            Int = trapz(self.S * FFy[i][:], dx=d) * 1e+18  # integration
+            hi.append(Int)
+            Int1 = trapz((self.k * self.FFx + self.b) * FFy[i][:], dx=d)  # integration
+            hi1.append(Int1)
+
+        hi = [-x for x in hi]
+        hi1 = [-x for x in hi1]
+        calculated_counts = np.exp(hi)
+
+        self._mw.error_approximation.display(100 * np.sum(
+            np.abs(calculated_counts - self.normalized_counts) / calculated_counts) / len(self.normalized_counts))
+
+        try:
+            self._mw.processeddataplot.removeItem(self.fit_image)
+            self._mw.processeddataplot.removeItem(self.baseline_image)
+        except: print(1)
+
+        self.fit_image = pg.PlotDataItem(self.time,
+                                         calculated_counts,
+                                                pen=pg.mkPen(palette.c6, style=QtCore.Qt.DotLine),
+                                                symbol='o',
+                                                symbolPen=palette.c6,
+                                                symbolBrush=palette.c6,
+                                                symbolSize=7
+                                         )
+        self._mw.processeddataplot.addItem(self.fit_image)
+
+        self.baseline_image = pg.PlotDataItem(self.time,
+                                         np.exp(hi1),
+                                         pen=pg.mkPen(palette.c6, style=QtCore.Qt.DotLine),
+                                         symbol='o',
+                                         symbolPen=palette.c6,
+                                         symbolBrush=palette.c6,
+                                         symbolSize=7
+                                         )
+        self._mw.processeddataplot.addItem(self.baseline_image)
+
+    def redraw_normalized_plot(self):
+        self._mw.processeddataplot.clear()
+
+        self.baseline = np.sum(self.counts2 + self.counts1) / len(self.counts2) / 2
+        C0_up = self.baseline / (1 - 0.01 * self._mw.contrast.value() / 2)
+        C0_down = C0_up * (1 - 0.01 * self._mw.contrast.value())
+        counts = self.counts2 - self.counts1
+
+        self.T = self.time * 8 * self._mw.sequence_order.value()
+
+        self.normalized_counts = (counts) / (C0_up - C0_down)
+
+        self.normalized_image = pg.PlotDataItem(self.T * 1.0e-6,
+                                                self.normalized_counts,
+                                                pen=pg.mkPen(palette.c2, style=QtCore.Qt.DotLine),
+                                                symbol='o',
+                                                symbolPen=palette.c2,
+                                                symbolBrush=palette.c2,
+                                                symbolSize=7)
+
+        self._mw.processeddataplot.addItem(self.normalized_image)
+        self._mw.processeddataplot.setLabel(axis='left', text='Counts', units='Counts/s')
+        self._mw.processeddataplot.setLabel(axis='bottom', text='time', units='us')
+        self._mw.processeddataplot.showGrid(x=True, y=True, alpha=0.8)
+        return
+
+    def _filter_function(self, tau):
+        # generate filter function
+        dt = 1e-9
+        n = int(tau / dt)
+
+        v = np.zeros(8 * self._mw.sequence_order.value() * n)
+
+        T = np.linspace(0, dt * n * 8 * self._mw.sequence_order.value(), num=8 * self._mw.sequence_order.value() * n)
+        v[:n // 2] = 1
+        k = n / 2 + 1
+        for j in range(8 * self._mw.sequence_order.value() - 1):
+            v[(n // 2 + j * n):(n // 2 + j * n + n)] = (-1) ** (j + 1)
+            k = k + 1
+        v[8 * self._mw.sequence_order.value() * n - n // 2:8 * self._mw.sequence_order.value() * n] = np.ones((n // 2,), dtype=np.int)
+        return T, v
+
+    def _fourier_transform(self, tau):
+        T, v = self._filter_function(tau)
+
+        g = int(self._mw.n_FFT.value())
+
+        signalFFT = np.fft.fft(v, g)
+
+        yf = (np.abs(signalFFT) ** 2) * (1e-9) / (8 * self._mw.sequence_order.value())
+        xf = np.fft.fftfreq(g, 1e-9)
+
+        self.FFy = yf[0:g]  # take only real part
+        self.FFx = xf[0:g]
+
+        f1 = (1 / (2 * self.time[0])) * 1.1  # bigger
+        f2 = (1 / (2 * self.time[-1])) * 0.5  # smaller
+
+        yf1 = self.FFy[np.where(self.FFx <= f1)]
+        xf1 = self.FFx[np.where(self.FFx <= f1)]
+
+        self.FFy = self.FFy[np.where(xf1 >= f2)]
+        self.FFx = self.FFx[np.where(xf1 >= f2)]
+        return
+
+    def _filter_function_button_fired(self):
+        self._fourier_transform(self.time[self._mw.N_tau.value()])
+
+        self._mw.filter_function.clear()
+
+        self.filter_function_image = pg.PlotDataItem(self.FFx * 1e-6,
+                                                     self.FFy,
+                                                pen=pg.mkPen(palette.c4, style=QtCore.Qt.DotLine),
+                                                symbol='o',
+                                                symbolPen=palette.c4,
+                                                symbolBrush=palette.c4,
+                                                symbolSize=4)
+
+        self._mw.filter_function.addItem(self.filter_function_image)
+        self._mw.filter_function.setLabel(axis='left', text='Intensity', units='arb.u.')
+        self._mw.filter_function.setLabel(axis='bottom', text='Frequency', units='MHz')
+        self._mw.filter_function.showGrid(x=True, y=True, alpha=0.8)
+        return
+
+    def _distance_to_NV_button_fired(self):
+
+        rho_H = 5 * 1e+28  # m^(-3), density of protons
+        # rho_B11 = 2.1898552552552544e+28  # m^(-3), density of B11
+
+        mu_p = 1.41060674333 * 1e-26  # proton magneton, J/T
+        g_B11 = 85.847004 * 1e+6 / (2 * np.pi)  # Hz/T
+        hbar = 1.054571800e-34  # J*s
+        # mu_B11 = hbar * g_B11 * 2 * np.pi  # for central transition
+
+        rho = rho_H
+        mu = mu_p
+
+        g = 2 * np.pi * 2.8 * 1e+10  # rad/s/T
+        mu0 = 4 * np.pi * 1e-7  # vacuum permeability, H/m or T*m/A
+
+        freq = self.FFx  # in Hz
+        d = self.FFx[1] - self.FFx[0]
+
+        S = self.S * 1e+18
+
+        base = (self.k * self.FFx + self.b)
+
+        Int = trapz((S - base), dx=d)  # integration
+
+        self._mw.Brms.display(np.sqrt(2 * Int))
+
+        self._mw.z.display(np.power(rho * ((0.05 * mu0 * mu / self._mw.Brms.value() * 1e9) ** 2), 1 / 3.)*1e+9)
+        # elif self.substance == 'hBN, B11 signal':
+        #     C1 = np.sqrt(0.654786) / (4 * np.pi)
+        #     self.z = np.power(rho * ((C1 * mu0 * mu / self.Brms * 1e9) ** 2), 1 / 3.)
+
+        self._mw.error_depth.display(self._mw.error_approximation.value() * self._mw.z.value()/ 100)
+        self._mw.Brms_error.display(self._mw.error_approximation.value() * self._mw.Brms.value() / 100)
+
+        self.base_image = pg.PlotDataItem(self.FFx,
+                                          base,
+                                                    pen=pg.mkPen(palette.c6, style=QtCore.Qt.DotLine),
+                                                    symbol='o',
+                                                    symbolPen=palette.c6,
+                                                    symbolBrush=palette.c6,
+                                                    symbolSize=5)
+
+        self._mw.spin_noise_plot.addItem(self.base_image)
+

@@ -1753,6 +1753,11 @@ class PulsedMeasurementGui(GUIBase):
         else:
             is_fft = False
 
+        if self._pa.second_plot_ComboBox.currentText() == 'Processed':
+            is_processed = True
+        else:
+            is_processed = False
+
         # create ErrorBarItems
         beamwidth = np.inf
         for i in range(len(x_data) - 1):
@@ -2145,7 +2150,9 @@ class PulsedMeasurementGui(GUIBase):
         else:
             self._pa.second_plot_GroupBox.setVisible(True)
 
-            if self._pa.second_plot_ComboBox.currentText() == 'FFT':
+            if self._pa.second_plot_ComboBox.currentText() == 'Processed':
+                self._pa.pulse_analysis_second_PlotWidget.setLogMode(x=False, y=False)
+            elif self._pa.second_plot_ComboBox.currentText() == 'FFT':
                 self._pa.pulse_analysis_second_PlotWidget.setLogMode(x=False, y=False)
             elif self._pa.second_plot_ComboBox.currentText() == 'Log(x)':
                 self._pa.pulse_analysis_second_PlotWidget.setLogMode(x=True, y=False)

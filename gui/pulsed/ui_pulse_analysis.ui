@@ -197,6 +197,11 @@
           </item>
           <item>
            <property name="text">
+            <string>Processed</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
             <string>FFT</string>
            </property>
           </item>

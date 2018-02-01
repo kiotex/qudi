@@ -26,6 +26,7 @@ import time
 
 from core.module import Connector, ConfigOption, StatusVar
 from gui.guibase import GUIBase
+from collections import OrderedDict
 from gui.guiutils import ColorBar
 from gui.colordefs import ColorScaleInferno
 from gui.colordefs import ColorScaleViridis
@@ -50,22 +51,6 @@ class App(QtWidgets.QDialog):
         self.width = 640
         self.height = 480
 
-    # def openFileNamesDialog(self):
-    #     options = QFileDialog.Options()
-    #     options |= QFileDialog.DontUseNativeDialog
-    #     files, _ = QFileDialog.getOpenFileNames(self, "QFileDialog.getOpenFileNames()", "",
-    #                                             "All Files (*.dat);;Python Files (*.txt)", options=options)
-    #     if files:
-    #         print(files)
-    #
-    # def saveFileDialog(self):
-    #     options = QFileDialog.Options()
-    #     options |= QFileDialog.DontUseNativeDialog
-    #     fileName, _ = QFileDialog.getSaveFileName(self, "QFileDialog.getSaveFileName()", "",
-    #                                               "All Files (*);;Text Files (*.txt)", options=options)
-    #     if fileName:
-    #         print(fileName)
-
 class NVdepthMainWindow(QtWidgets.QMainWindow):
 
     """ Create the Mainwindow based on the corresponding *.ui file. """
@@ -82,10 +67,6 @@ class NVdepthMainWindow(QtWidgets.QMainWindow):
         uic.loadUi(ui_file, self)
         self.show()
 
-    # def keyPressEvent(self, event):
-    #     """Pass the keyboard press event from the main window further. """
-    #     self.sigPressKeyBoard.emit(event)
-
 class NoiseSpectrumGui(GUIBase):
 
     """ Class for the alignment of the magnetic field.
@@ -93,7 +74,11 @@ class NoiseSpectrumGui(GUIBase):
     _modclass = 'MagnetControlGui'
     _modtype = 'gui'
 
+    # declare connectors
+    fitlogic = Connector(interface='FitLogic')
     savelogic = Connector(interface='SaveLogic')
+
+    fc = StatusVar('fits', None)
 
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
@@ -107,6 +92,7 @@ class NoiseSpectrumGui(GUIBase):
 
         # # Getting an access to all connectors:
         self._save_logic = self.get_connector('savelogic')
+        self._fit_logic = self.get_connector('fitlogic')
 
         self.initMainUI()      # initialize the main GUI
 
@@ -115,125 +101,38 @@ class NoiseSpectrumGui(GUIBase):
 
         self._mw.actionOpen.triggered.connect(self.open_file)
 
-        # # Get the image from the logic
-        # self.imageX = pg.PlotDataItem(self._magnet_logic.fluor_plot_x,
-        #                               self._magnet_logic.fluor_plot_y,
-        #                              pen=pg.mkPen(palette.c1, style=QtCore.Qt.DotLine),
-        #                              symbol='o',
-        #                              symbolPen=palette.c1,
-        #                              symbolBrush=palette.c1,
-        #                              symbolSize=7)
-        #
-        # self.imageY = pg.PlotDataItem(self._magnet_logic.yfluor_plot_x,
-        #                               self._magnet_logic.yfluor_plot_y,
-        #                               pen=pg.mkPen(palette.c1, style=QtCore.Qt.DotLine),
-        #                               symbol='o',
-        #                               symbolPen=palette.c1,
-        #                               symbolBrush=palette.c1,
-        #                               symbolSize=7)
-        #
-        # self.fluor_x_fit_image = pg.PlotDataItem(self._magnet_logic.x_scan_fit_x,
-        #                                       self._magnet_logic.x_scan_fit_y,
-        #                                       pen=pg.mkPen(palette.c2))
-        # self.fluor_y_fit_image = pg.PlotDataItem(self._magnet_logic.y_scan_fit_x,
-        #                                          self._magnet_logic.y_scan_fit_y,
-        #                                          pen=pg.mkPen(palette.c2))
-        #
-        # # Add the display item to the X_scan and Y_scan, which were defined in the UI file.
-        # self._mw.X_scan.addItem(self.imageX)
-        # self._mw.X_scan.setLabel(axis='left', text='Counts', units='Counts/s')
-        # self._mw.X_scan.setLabel(axis='bottom', text='X axis', units='mm')
-        # self._mw.X_scan.showGrid(x=True, y=True, alpha=0.8)
-        #
-        # self._mw.Y_scan.addItem(self.imageY)
-        # self._mw.Y_scan.setLabel(axis='left', text='Counts', units='Counts/s')
-        # self._mw.Y_scan.setLabel(axis='bottom', text='X axis', units='mm')
-        # self._mw.Y_scan.showGrid(x=True, y=True, alpha=0.8)
-        #
-        # ########################################################################
-        # #          Configuration of the various display Widgets                #
-        # ########################################################################
-        # # Take the default values from logic:
-        # self._mw.x_start.setValue(self._magnet_logic.x_start)
-        # self._mw.x_end.setValue(self._magnet_logic.x_end)
-        # self._mw.step_x.setValue(self._magnet_logic.step_x)
-        #
-        # self._mw.y_start.setValue(self._magnet_logic.y_start)
-        # self._mw.y_end.setValue(self._magnet_logic.y_end)
-        # self._mw.step_y.setValue(self._magnet_logic.step_y)
-        #
-        # self._mw.acq_time.setValue(self._magnet_logic.fluorescence_integration_time)
-        # self._mw.N_AF_points.setValue(self._magnet_logic.N_AF_points)
-        #
-        # self._mw.set_x_pos.setValue(self._magnet_logic.set_x_pos)
-        # self._mw.set_y_pos.setValue(self._magnet_logic.set_y_pos)
-        # self._mw.set_z_pos.setValue(self._magnet_logic.set_z_pos)
-        #
-        # # fit settings
-        # self._fsd = FitSettingsDialog(self._magnet_logic.fc)
-        # self._fsd.sigFitsUpdated.connect(self._mw.fit_methods_ComboBox.setFitFunctions)
-        # self._fsd.sigFitsUpdated.connect(self._mw.fit_methods_ComboBox_2.setFitFunctions)
-        # self._fsd.applySettings()
-        # self._mw.action_FitSettings.triggered.connect(self._fsd.show)
-        #
-        # ########################################################################
-        # #                       Connect signals                                #
-        # ########################################################################
-        # # Internal user input changed signals
-        # self._mw.x_start.editingFinished.connect(self.change_x_start)
-        # self._mw.x_end.editingFinished.connect(self.change_x_end)
-        # self._mw.step_x.editingFinished.connect(self.change_step_x)
-        #
-        # self._mw.y_start.editingFinished.connect(self.change_y_start)
-        # self._mw.y_end.editingFinished.connect(self.change_y_end)
-        # self._mw.step_y.editingFinished.connect(self.change_step_y)
-        #
-        # self._mw.acq_time.editingFinished.connect(self.change_acq_time)
-        # self._mw.N_AF_points.editingFinished.connect(self.change_N_AF_points)
-        #
-        # self._mw.set_x_pos.editingFinished.connect(self.change_set_x_pos)
-        # self._mw.set_y_pos.editingFinished.connect(self.change_set_y_pos)
-        # self._mw.set_z_pos.editingFinished.connect(self.change_set_z_pos)
-        #
-        # self._mw.do_x_fit_PushButton.clicked.connect(self.do_x_fit)
-        # self.sigDoXFit.connect(self._magnet_logic.do_x_fit, QtCore.Qt.QueuedConnection)
-        # self._magnet_logic.sigFitXUpdated.connect(self.update_x_fit, QtCore.Qt.QueuedConnection)
-        #
-        # self._mw.do_y_fit_PushButton.clicked.connect(self.do_y_fit)
-        # self.sigDoYFit.connect(self._magnet_logic.do_y_fit, QtCore.Qt.QueuedConnection)
-        # self._magnet_logic.sigFitYUpdated.connect(self.update_y_fit, QtCore.Qt.QueuedConnection)
-        #
-        # #################################################################
-        # #                           Actions                             #
-        # #################################################################
-        # # Connect the scan actions to the events if they are clicked. Connect
-        # # also the adjustment of the displayed windows.
-        # self._mw.action_stop_scanning.triggered.connect(self.ready_clicked)
-        #
-        # self._scan_x_start_proxy = pg.SignalProxy(
-        #     self._mw.action_scan_x_start.triggered,
-        #     delay=0.1,
-        #     slot=self.x_scan_clicked
-        # )
-        #
-        # self._scan_y_start_proxy = pg.SignalProxy(
-        #     self._mw.action_scan_y_start.triggered,
-        #     delay=0.1,
-        #     slot=self.y_scan_clicked
-        # )
-        #
-        # self._magnet_logic.sigPlotXUpdated.connect(self.update_x_plot, QtCore.Qt.QueuedConnection)
-        # self._magnet_logic.sigPlotYUpdated.connect(self.update_y_plot, QtCore.Qt.QueuedConnection)
-        # self._magnet_logic.sigPositionUpdated.connect(self.get_current_position)
-        #
-        # self._magnet_logic.signal_stop_scanning.connect(self.ready_clicked)
-        #
-        # self._mw.currposbutton.clicked.connect(self.get_current_position)
-        # self._mw.appl_pos_butt.clicked.connect(self.apply_position)
-        # self._mw.Set_pos_button.clicked.connect(self.set_position)
-        #
-        # self.get_current_position()
+        self.time = np.zeros(1)
+        self.counts1 = np.zeros(1)
+        self.error1 = np.zeros(1)
+        self.counts2 = np.zeros(1)
+        self.error2 = np.zeros(1)
 
+        self._mw.sequence_order.editingFinished.connect(self.redraw_normalized_plot)
+        self._mw.contrast.editingFinished.connect(self.redraw_normalized_plot)
+
+        self._mw.n_FFT.setMaximum(3.0e+06)
+        self._mw.n_FFT.setValue(2.0e+06)
+
+        self._mw.calculate_filter_function.clicked.connect(self._filter_function_button_fired)
+        self._mw.calculate_ns.clicked.connect(self._calculate_noise_spectrum_button_fired)
+
+        self.fit_x=np.array([0, 1])
+        self.fit_y=np.array([0, 1])
+
+        self.fit_image = pg.PlotDataItem(self.fit_x,
+                                         self.fit_y,
+                                         pen=pg.mkPen(palette.c3))
+
+        # fit settings
+        self._fsd = FitSettingsDialog(self.fc)
+        self._fsd.sigFitsUpdated.connect(self._mw.fit_methods_ComboBox.setFitFunctions)
+        self._fsd.applySettings()
+        self._mw.actionFit_Settings.triggered.connect(self._fsd.show)
+
+        self._mw.do_x_fit_PushButton.clicked.connect(self.do_x_fit)
+
+        if 'fits' in self._statusVariables and isinstance(self._statusVariables['fits'], dict):
+            self.fc.load_from_dict(self._statusVariables['fits'])
         return
 
     def initMainUI(self):
@@ -300,6 +199,9 @@ class NoiseSpectrumGui(GUIBase):
         self.counts2 = np.zeros(len(a))
         self.error2 = np.zeros(len(a))
 
+        self._mw.data_plot.clear()
+        self._mw.processeddataplot.clear()
+
         for i in range(len(a)):
             self.time[i]=np.asarray(a[i].split(), dtype=np.float32)[0]
             self.counts1[i] = np.asarray(a[i].split(), dtype=np.float32)[1]
@@ -307,7 +209,7 @@ class NoiseSpectrumGui(GUIBase):
             self.counts2[i] = np.asarray(a[i].split(), dtype=np.float32)[2]
             self.error2[i] = np.asarray(a[i].split(), dtype=np.float32)[4]
 
-        self.data_image1 = pg.PlotDataItem(self.time*1e+9,
+        self.data_image1 = pg.PlotDataItem(self.time,
                                      self.counts1,
                                      pen=pg.mkPen(palette.c1, style=QtCore.Qt.DotLine),
                                      symbol='o',
@@ -316,7 +218,7 @@ class NoiseSpectrumGui(GUIBase):
                                      symbolSize=7)
 
         self._mw.data_plot.addItem(self.data_image1)
-        self.data_image2 = pg.PlotDataItem(self.time * 1e+9,
+        self.data_image2 = pg.PlotDataItem(self.time,
                                            self.counts2,
                                            pen=pg.mkPen(palette.c3, style=QtCore.Qt.DotLine),
                                            symbol='o',
@@ -326,12 +228,19 @@ class NoiseSpectrumGui(GUIBase):
 
         self._mw.data_plot.addItem(self.data_image2)
         self._mw.data_plot.setLabel(axis='left', text='Counts', units='Counts/s')
-        self._mw.data_plot.setLabel(axis='bottom', text='time', units='ns')
+        self._mw.data_plot.setLabel(axis='bottom', text='time', units='s')
         self._mw.data_plot.showGrid(x=True, y=True, alpha=0.8)
 
-        self.normalized_counts =np.abs(self.counts2-self.counts1)
+        self.baseline = np.sum(self.counts2+self.counts1)/len(self.counts2)/2
+        C0_up = self.baseline / (1 - 0.01 * self._mw.contrast.value() / 2)
+        C0_down = C0_up * (1 - 0.01 * self._mw.contrast.value())
+        counts = self.counts2 - self.counts1
 
-        self.normalized_image = pg.PlotDataItem(self.time * 1e+9,
+        self.T = self.time * 8 * self._mw.sequence_order.value()
+
+        self.normalized_counts = (counts) / (C0_up - C0_down)
+
+        self.normalized_image = pg.PlotDataItem(self.time, #self.T,
                                            self.normalized_counts,
                                            pen=pg.mkPen(palette.c2, style=QtCore.Qt.DotLine),
                                            symbol='o',
@@ -341,284 +250,221 @@ class NoiseSpectrumGui(GUIBase):
 
         self._mw.processeddataplot.addItem(self.normalized_image)
         self._mw.processeddataplot.setLabel(axis='left', text='Counts', units='Counts/s')
-        self._mw.processeddataplot.setLabel(axis='bottom', text='time', units='ns')
+        self._mw.processeddataplot.setLabel(axis='bottom', text='time', units='s')
         self._mw.processeddataplot.showGrid(x=True, y=True, alpha=0.8)
 
     def _calculate_noise_spectrum_button_fired(self):
 
-        self.T = self.time * 8 * self.N + 0.25 * self.rabi_period * 1e-9
+        self._mw.spin_noise_plot.clear()
+
         S = -np.log(self.normalized_counts) / self.T
+        # self.S = np.concatenate((self.S, S), axis=0)
 
-        self.S = np.concatenate((self.S, S), axis=0)
+        frequency = 1e+6 * 1e-9 * 0.5e+3 / self.time  # (in Hz)
 
-        frequency = 1e+6 * 1e-9 * 0.5e+3 / self.tau  # (in Hz)
+        # self.frequency = np.concatenate((self.frequency, frequency), axis=0)
 
-        self.frequency = np.concatenate((self.frequency, frequency), axis=0)
+        self.noise_spectrum_image = pg.PlotDataItem(frequency * 1e-6,
+                                                S,
+                                                pen=pg.mkPen(palette.c5, style=QtCore.Qt.DotLine),
+                                                symbol='o',
+                                                symbolPen=palette.c5,
+                                                symbolBrush=palette.c5,
+                                                symbolSize=7)
 
-        self.plot_data_spin_noise.set_data('value', self.S)
-        self.plot_data_spin_noise.set_data('time', self.frequency * 1e-6)
+        self._mw.spin_noise_plot.addItem(self.noise_spectrum_image)
+        self._mw.spin_noise_plot.setLabel(axis='left', text='Intensity', units='arb.u.')
+        self._mw.spin_noise_plot.setLabel(axis='bottom', text='Frequency', units='MHz')
+        self._mw.spin_noise_plot.showGrid(x=True, y=True, alpha=0.8)
 
+    def redraw_normalized_plot(self):
+        self._mw.processeddataplot.clear()
 
-        ############################################################################
-        #                           Change Methods                                 #
-        ############################################################################
+        self.baseline = np.sum(self.counts2 + self.counts1) / len(self.counts2) / 2
+        C0_up = self.baseline / (1 - 0.01 * self._mw.contrast.value() / 2)
+        C0_down = C0_up * (1 - 0.01 * self._mw.contrast.value())
+        counts = self.counts2 - self.counts1
 
-    # def change_x_start(self):
-    #     """ Update the starting position along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.x_start = self._mw.x_start.value()
-    #     return
-    #
-    # def change_x_end(self):
-    #     """ Update the final position along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.x_end = self._mw.x_end.value()
-    #     return
-    #
-    # def change_step_x(self):
-    #     """ Update step along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.step_x = self._mw.step_x.value()
-    #     if self._magnet_logic.x_start!=0 and self._magnet_logic.x_end!=0:
-    #         self._mw.n_x_points.setValue(len(np.arange(self._mw.x_start.value(), self._mw.x_end.value(), self._mw.step_x.value())))
-    #         self._magnet_logic.n_x_points = self._mw.n_x_points.value()
-    #     return
-    #
-    # def change_y_start(self):
-    #     """ Update the xy resolution in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.y_start = self._mw.y_start.value()
-    #     return
-    #
-    # def change_y_end(self):
-    #     """ Update the xy resolution in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.y_end = self._mw.y_end.value()
-    #     return
-    #
-    # def change_step_y(self):
-    #     """ Update the xy resolution in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.step_y = self._mw.step_y.value()
-    #     if self._magnet_logic.y_start!=0 and self._magnet_logic.y_end!=0:
-    #         self._mw.n_y_points.setValue(len(np.arange(self._mw.y_start.value(), self._mw.y_end.value(), self._mw.step_y.value())))
-    #         self._magnet_logic.n_y_points = self._mw.n_y_points.value()
-    #     return
-    #
-    # def change_acq_time(self):
-    #     """ Update the xy resolution in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.fluorescence_integration_time = self._mw.acq_time.value()
-    #     return
-    #
-    # def change_N_AF_points(self):
-    #     """ Update the xy resolution in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.N_AF_points = self._mw.N_AF_points.value()
-    #     return
-    #
-    # def change_set_x_pos(self):
-    #     """ Update the starting position along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.set_x_pos = self._mw.set_x_pos.value()
-    #
-    #     return
-    #
-    # def change_set_y_pos(self):
-    #     """ Update the final position along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.set_y_pos = self._mw.set_y_pos.value()
-    #     return
-    #
-    # def change_set_z_pos(self):
-    #     """ Update step along x axis in the logic according to the GUI.
-    #     """
-    #     self._magnet_logic.set_z_pos = self._mw.set_z_pos.value()
-    #     return
-    #
-    # def get_current_position(self):
-    #     """ Update current actuators position in the logic according to the GUI.
-    #             """
-    #     self._magnet_logic.get_current_position()
-    #     time.sleep(0.1)
-    #     self._mw.curr_x_pos.setValue(self._magnet_logic.curr_x_pos)
-    #     self._mw.curr_y_pos.setValue(self._magnet_logic.curr_y_pos)
-    #     self._mw.curr_z_pos.setValue(self._magnet_logic.curr_z_pos)
-    #
-    #     return
-    #
-    # def apply_position(self):
-    #     """ Update current actuators position in the logic according to the GUI.
-    #             """
-    #
-    #     self._mw.set_x_pos.setValue(self._mw.curr_x_pos.value())
-    #     self._mw.set_y_pos.setValue(self._mw.curr_y_pos.value())
-    #     self._mw.set_z_pos.setValue(self._mw.curr_z_pos.value())
-    #
-    #     self._magnet_logic.set_x_pos = self._mw.set_x_pos.value()
-    #     self._magnet_logic.set_y_pos = self._mw.set_y_pos.value()
-    #     self._magnet_logic.set_z_pos = self._mw.set_z_pos.value()
-    #     return
-    #
-    # def set_position(self):
-    #
-    #     self._magnet_logic.set_position()
-    #     return
-    #
-    # def x_scan_clicked(self):
-    #     """ Manages what happens if the xy scan is started. """
-    #     self.disable_scan_actions()
-    #     self._magnet_logic.start_x_scanning(tag='gui')
-    #
-    #
-    # def y_scan_clicked(self):
-    #     """ Manages what happens if the xy scan is started. """
-    #     self.disable_scan_actions()
-    #     self._magnet_logic.start_y_scanning(tag='gui')
-    #
-    # def disable_scan_actions(self):
-    #     """ Disables the buttons for scanning.
-    #     """
-    #     # Ensable the stop scanning button
-    #     self._mw.action_stop_scanning.setEnabled(True)
-    #
-    #     # Disable the start scan buttons
-    #     self._mw.action_scan_x_start.setEnabled(False)
-    #     self._mw.action_scan_y_start.setEnabled(False)
-    #
-    #     self._mw.set_x_pos.setEnabled(False)
-    #     self._mw.set_y_pos.setEnabled(False)
-    #     self._mw.set_z_pos.setEnabled(False)
-    #
-    #     self._mw.acq_time.setEnabled(False)
-    #
-    #     self._mw.x_start.setEnabled(False)
-    #     self._mw.x_end.setEnabled(False)
-    #     self._mw.step_x.setEnabled(False)
-    #
-    #     self._mw.y_start.setEnabled(False)
-    #     self._mw.y_end.setEnabled(False)
-    #     self._mw.step_y.setEnabled(False)
-    #
-    #     self._mw.N_AF_points.setEnabled(False)
-    #
-    # def enable_scan_actions(self):
-    #     """ Disables the buttons for scanning.
-    #     """
-    #     # Disable the start scan buttons
-    #     self._mw.action_scan_x_start.setEnabled(True)
-    #     self._mw.action_scan_y_start.setEnabled(True)
-    #
-    #     self._mw.set_x_pos.setEnabled(True)
-    #     self._mw.set_y_pos.setEnabled(True)
-    #     self._mw.set_z_pos.setEnabled(True)
-    #
-    #     self._mw.acq_time.setEnabled(True)
-    #
-    #     self._mw.x_start.setEnabled(True)
-    #     self._mw.x_end.setEnabled(True)
-    #     self._mw.step_x.setEnabled(True)
-    #
-    #     self._mw.y_start.setEnabled(True)
-    #     self._mw.y_end.setEnabled(True)
-    #     self._mw.step_y.setEnabled(True)
-    #
-    #     self._mw.N_AF_points.setEnabled(True)
-    #
-    # def ready_clicked(self):
-    #     """ Stopp the scan if the state has switched to ready. """
-    #     if self._magnet_logic.getState() == 'idle':
-    #         self._magnet_logic.stopRequested=True
-    #         self.enable_scan_actions()
-    #
-    # def update_x_plot(self, data_x, data_y):
-    #     """ Refresh the plot widgets with new data. """
-    #     # Update mean signal plot
-    #     self.imageX.setData(data_x, data_y)
-    #
-    # def update_y_plot(self, data_x, data_y):
-    #     """ Refresh the plot widgets with new data. """
-    #     # Update mean signal plot
-    #     self.imageY.setData(data_x, data_y)
-    #
-    # def do_x_fit(self):
-    #     fit_function  = self._mw.fit_methods_ComboBox.getCurrentFit()[0]
-    #     self.sigDoXFit.emit(fit_function)
-    #     return
-    #
-    # def do_y_fit(self):
-    #     fit_function  = self._mw.fit_methods_ComboBox.getCurrentFit()[0]
-    #     self.sigDoYFit.emit(fit_function)
-    #     return
-    #
-    # def update_x_fit(self, x_data, y_data, result_str_dict, current_fit):
-    #     """ Update the shown fit. """
-    #     if current_fit != 'No Fit':
-    #         # display results as formatted text
-    #         self._mw.x_fit_result.clear()
-    #         try:
-    #             formated_results = units.create_formatted_output(result_str_dict)
-    #         except:
-    #             formated_results = 'this fit does not return formatted results'
-    #         self._mw.x_fit_result.setPlainText(formated_results)
-    #
-    #     self._mw.fit_methods_ComboBox.blockSignals(True)
-    #     self._mw.fit_methods_ComboBox.setCurrentFit(current_fit)
-    #     self._mw.fit_methods_ComboBox.blockSignals(False)
-    #
-    #     # check which Fit method is used and remove or add again the
-    #     # odmr_fit_image, check also whether a odmr_fit_image already exists.
-    #     if current_fit != 'No Fit':
-    #         self.fluor_x_fit_image.setData(x=x_data, y=y_data)
-    #         if self.fluor_x_fit_image not in self._mw.X_scan.listDataItems():
-    #             self._mw.X_scan.addItem(self.fluor_x_fit_image)
-    #     else:
-    #         if self.fluor_x_fit_image in self._mw.X_scan.listDataItems():
-    #             self._mw.X_scan.removeItem(self.fluor_x_fit_image)
-    #
-    #     self._mw.X_scan.getViewBox().updateAutoRange()
-    #     return
-    #
-    # def update_y_fit(self, x_data, y_data, result_str_dict, current_fit):
-    #     """ Update the shown fit. """
-    #     if current_fit != 'No Fit':
-    #         # display results as formatted text
-    #         self._mw.y_fit_result.clear()
-    #         try:
-    #             formated_results = units.create_formatted_output(result_str_dict)
-    #         except:
-    #             formated_results = 'this fit does not return formatted results'
-    #         self._mw.y_fit_result.setPlainText(formated_results)
-    #
-    #     self._mw.fit_methods_ComboBox.blockSignals(True)
-    #     self._mw.fit_methods_ComboBox.setCurrentFit(current_fit)
-    #     self._mw.fit_methods_ComboBox.blockSignals(False)
-    #
-    #     # check which Fit method is used and remove or add again the
-    #     # odmr_fit_image, check also whether a odmr_fit_image already exists.
-    #     if current_fit != 'No Fit':
-    #         self.fluor_y_fit_image.setData(x=x_data, y=y_data)
-    #         if self.fluor_y_fit_image not in self._mw.Y_scan.listDataItems():
-    #             self._mw.Y_scan.addItem(self.fluor_y_fit_image)
-    #     else:
-    #         if self.fluor_y_fit_image in self._mw.Y_scan.listDataItems():
-    #             self._mw.Y_scan.removeItem(self.fluor_y_fit_image)
-    #
-    #     self._mw.Y_scan.getViewBox().updateAutoRange()
-    #     return
-    #
-    # def save_data(self):
-    #     """ Save the sum plot, the scan marix plot and the scan data """
-    #     filetag = self._mw.save_tag_LineEdit.text()
-    #     cb_range = self.get_matrix_cb_range()
-    #
-    #     # Percentile range is None, unless the percentile scaling is selected in GUI.
-    #     pcile_range = None
-    #     if self._mw.odmr_cb_centiles_RadioButton.isChecked():
-    #         low_centile = self._mw.odmr_cb_low_percentile_DoubleSpinBox.value()
-    #         high_centile = self._mw.odmr_cb_high_percentile_DoubleSpinBox.value()
-    #         pcile_range = [low_centile, high_centile]
-    #
-    #     self.sigSaveMeasurement.emit(filetag, cb_range, pcile_range)
-    #     return
-    #
+        self.T = self.time * 8 * self._mw.sequence_order.value()
+
+        self.normalized_counts = (counts) / (C0_up - C0_down)
+
+        self.normalized_image = pg.PlotDataItem(self.time, #self.T * 1.0e-6,
+                                                self.normalized_counts,
+                                                pen=pg.mkPen(palette.c2, style=QtCore.Qt.DotLine),
+                                                symbol='o',
+                                                symbolPen=palette.c2,
+                                                symbolBrush=palette.c2,
+                                                symbolSize=7)
+
+        self._mw.processeddataplot.addItem(self.normalized_image)
+        self._mw.processeddataplot.setLabel(axis='left', text='Counts', units='Counts/s')
+        self._mw.processeddataplot.setLabel(axis='bottom', text='time', units='us')
+        self._mw.processeddataplot.showGrid(x=True, y=True, alpha=0.8)
+        return
+
+    def _filter_function(self, tau):
+        # generate filter function
+        dt = 1e-9
+        n = int(tau / dt)
+
+        v = np.zeros(8 * self._mw.sequence_order.value() * n)
+
+        T = np.linspace(0, dt * n * 8 * self._mw.sequence_order.value(), num=8 * self._mw.sequence_order.value() * n)
+        v[:n // 2] = 1
+        k = n / 2 + 1
+        for j in range(8 * self._mw.sequence_order.value() - 1):
+            v[(n // 2 + j * n):(n // 2 + j * n + n)] = (-1) ** (j + 1)
+            k = k + 1
+        v[8 * self._mw.sequence_order.value() * n - n // 2:8 * self._mw.sequence_order.value() * n] = np.ones((n // 2,), dtype=np.int)
+        return T, v
+
+    def _fourier_transform(self, tau):
+        T, v = self._filter_function(tau)
+
+        g = int(self._mw.n_FFT.value())
+
+        signalFFT = np.fft.fft(v, g)
+
+        yf = (np.abs(signalFFT) ** 2) * (1e-9) / (8 * self._mw.sequence_order.value())
+        xf = np.fft.fftfreq(g, 1e-9)
+
+        self.FFy = yf[0:g]  # take only real part
+        self.FFx = xf[0:g]
+
+        f1 = (1 / (2 * self.time[0])) * 1.1  # bigger
+        f2 = (1 / (2 * self.time[-1])) * 0.5  # smaller
+
+        yf1 = self.FFy[np.where(self.FFx <= f1)]
+        xf1 = self.FFx[np.where(self.FFx <= f1)]
+
+        self.FFy = self.FFy[np.where(xf1 >= f2)]
+        self.FFx = self.FFx[np.where(xf1 >= f2)]
+        return
+
+    def _filter_function_button_fired(self):
+        self._fourier_transform(self.time[self._mw.N_tau.value()])
+
+        self._mw.filter_function.clear()
+
+        self.filter_function_image = pg.PlotDataItem(self.FFx * 1e-6,
+                                                     self.FFy,
+                                                pen=pg.mkPen(palette.c4, style=QtCore.Qt.DotLine),
+                                                symbol='o',
+                                                symbolPen=palette.c4,
+                                                symbolBrush=palette.c4,
+                                                symbolSize=7)
+
+        self._mw.filter_function.addItem(self.filter_function_image)
+        self._mw.filter_function.setLabel(axis='left', text='Intensity', units='arb.u.')
+        self._mw.filter_function.setLabel(axis='bottom', text='Frequency', units='MHz')
+        self._mw.filter_function.showGrid(x=True, y=True, alpha=0.8)
+        return
+
+    @fc.constructor
+    def sv_set_fits(self, val):
+        # Setup fit container
+        fc = self.fitlogic().make_fit_container('processed', '1d')
+        fc.set_units(['s', 'c/s'])
+        if isinstance(val, dict) and len(val) > 0:
+            fc.load_from_dict(val)
+        else:
+            d1 = OrderedDict()
+            d1['Gaussian peak'] = {
+                'fit_function': 'gaussian',
+                'estimator': 'peak'
+            }
+
+            d1['Lorentzian peak'] = {
+                'fit_function': 'lorentzian',
+                'estimator': 'peak'
+            }
+            d1['Two Lorentzian dips'] = {
+                'fit_function': 'lorentziandouble',
+                'estimator': 'dip'
+            }
+            d1['N14'] = {
+                'fit_function': 'lorentziantriple',
+                'estimator': 'N14'
+            }
+            d1['N15'] = {
+                'fit_function': 'lorentziandouble',
+                'estimator': 'N15'
+            }
+
+            default_fits = OrderedDict()
+            default_fits['1d'] = d1['Lorentzian peak']
+
+            fc.load_from_dict(default_fits)
+        return fc
+
+    @fc.representer
+    def sv_get_fits(self, val):
+        """ save configured fits """
+        if len(val.fit_list) > 0:
+            return val.save_to_dict()
+        else:
+            return None
+
+    def get_fit_x_functions(self):
+        """ Return the hardware constraints/limits
+        @return list(str): list of fit function names
+        """
+        return list(self.fc.fit_list)
+
+    def do_x_fit(self, fit_function=None, x_data=None, y_data=None):
+        """
+        Execute the currently configured fit on the measurement data. Optionally on passed data
+        """
+        fit_function = self.get_fit_x_functions()[0]
+        if (x_data is None) or (y_data is None):
+            x_data = self.time
+            y_data = self.normalized_counts
+
+        if fit_function is not None and isinstance(fit_function, str):
+            if fit_function in self.get_fit_x_functions():
+                self.fc.set_current_fit(fit_function)
+            else:
+                self.fc.set_current_fit('No Fit')
+                if fit_function != 'No Fit':
+                    self.log.warning('Fit function "{0}" not available in ODMRLogic fit container.'
+                                     ''.format(fit_function))
+        self.fit_x, self.fit_y, result = self.fc.do_fit(x_data, y_data)
+        print(result)
+
+        if result is None:
+            result_str_dict = {}
+        else:
+            result_str_dict = result.result_str_dict
+        self.update_x_fit(self.fit_x, self.fit_y,
+                                    result_str_dict, self.fc.current_fit)
+        return
+
+    def update_x_fit(self, x_data, y_data, result_str_dict, current_fit):
+        """ Update the shown fit. """
+
+        if current_fit != 'No Fit':
+            # display results as formatted text
+            self._mw.x_fit_result.clear()
+            try:
+                formated_results = units.create_formatted_output(result_str_dict)
+            except:
+                formated_results = 'this fit does not return formatted results'
+            self._mw.x_fit_result.setPlainText(formated_results)
+
+        self._mw.fit_methods_ComboBox.blockSignals(True)
+        self._mw.fit_methods_ComboBox.setCurrentFit(current_fit)
+        self._mw.fit_methods_ComboBox.blockSignals(False)
+
+        # check which Fit method is used and remove or add again the
+        # odmr_fit_image, check also whether a odmr_fit_image already exists.
+        if current_fit != 'No Fit':
+            self.fit_image.setData(x=x_data, y=y_data)
+            if self.fit_image not in self._mw.processeddataplot.listDataItems():
+                self._mw.processeddataplot.addItem(self.fit_image)
+        else:
+            if self.fit_image in self._mw.processeddataplot.listDataItems():
+                self._mw.processeddataplot.removeItem(self.fit_image)
+
+        # self._mw.X_scan.getViewBox().updateAutoRange()
+        return

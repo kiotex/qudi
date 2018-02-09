@@ -26,6 +26,7 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 
 
 from core.module import Base, ConfigOption
+from core.util.modules import get_main_dir
 from interface.fast_counter_interface import FastCounterInterface
 import time
 import os
@@ -167,9 +168,11 @@ class FastComtec(Base, FastCounterInterface):
     _modclass = 'FastComtec'
     _modtype = 'hardware'
 
-    GATED = ConfigOption('gated', False, missing='warn')
+    gated = ConfigOption('gated', False, missing='warn')
+
     trigger_safety = ConfigOption('trigger_safety', 200e-9, missing='warn')
     aom_delay = ConfigOption('aom_delay', 400e-9, missing='warn')
+    minimal_binwidth = ConfigOption('minimal_binwidth', 0.2e-9, missing='warn')
 
 
     def __init__(self, config, **kwargs):
@@ -181,8 +184,6 @@ class FastComtec(Base, FastCounterInterface):
         for key in config.keys():
             self.log.info('{0}: {1}'.format(key,config[key]))
 
-        self.GATED = False
-        self.MINIMAL_BINWIDTH = 0.2e-9    # in seconds per bin
         #this variable has to be added because there is no difference
         #in the fastcomtec it can be on "stopped" or "halt"
         self.stopped_or_halt = "stopped"
@@ -193,7 +194,7 @@ class FastComtec(Base, FastCounterInterface):
         """
 
         self.dll = ctypes.windll.LoadLibrary('C:\Windows\System32\DMCS6.dll')
-        if self.GATED:
+        if self.gated:
             self.change_sweep_mode(gated=True)
         else:
             self.change_sweep_mode(gated=False)
@@ -243,7 +244,7 @@ class FastComtec(Base, FastCounterInterface):
 
         # the unit of those entries are seconds per bin. In order to get the
         # current binwidth in seonds use the get_binwidth method.
-        constraints['hardware_binwidth_list'] = list(self.MINIMAL_BINWIDTH * (2 ** np.array(
+        constraints['hardware_binwidth_list'] = list(self.minimal_binwidth * (2 ** np.array(
                                                      np.linspace(0,24,25))))
         constraints['max_sweep_len'] = 6.8
         return constraints
@@ -269,7 +270,7 @@ class FastComtec(Base, FastCounterInterface):
         # when not gated, record length = total sequence length, when gated, record length = laser length.
         # subtract 200 ns to make sure no sequence trigger is missed
         record_length_FastComTech_s = record_length_s
-        if self.GATED:
+        if self.gated:
             # add time to account for AOM delay
             no_of_bins = int((record_length_FastComTech_s + self.aom_delay) / self.set_binwidth(bin_width_s))
         else:
@@ -329,7 +330,7 @@ class FastComtec(Base, FastCounterInterface):
         status = self.dll.Halt(0)
         while self.get_status() != 3:
             time.sleep(0.05)
-        if self.GATED:
+        if self.gated:
             self.timetrace_tmp = self.get_data_trace()
         return status
 
@@ -339,13 +340,13 @@ class FastComtec(Base, FastCounterInterface):
         status = self.dll.Halt(0)
         while self.get_status() != 1:
             time.sleep(0.05)
-        if self.GATED:
+        if self.gated:
             self.timetrace_tmp = []
         return status
 
     def continue_measure(self):
         """Continue a paused measurement. """
-        if self.GATED:
+        if self.gated:
             status = self.start_measure()
         else:
             status = self.dll.Continue(0)
@@ -361,7 +362,7 @@ class FastComtec(Base, FastCounterInterface):
         The red out bitshift will be converted to binwidth. The binwidth is
         defined as 2**bitshift*minimal_binwidth.
         """
-        return self.MINIMAL_BINWIDTH*(2**int(self.get_bitshift()))
+        return self.minimal_binwidth*(2**int(self.get_bitshift()))
 
     def is_gated(self):
         """ Check the gated counting possibility.
@@ -369,7 +370,7 @@ class FastComtec(Base, FastCounterInterface):
         @return bool: Boolean value indicates if the fast counter is a gated
                       counter (TRUE) or not (FALSE).
         """
-        return self.GATED
+        return self.gated
 
     def set_gated(self, gated):
         """ Check the gated counting possibility.
@@ -377,9 +378,9 @@ class FastComtec(Base, FastCounterInterface):
         @return bool: Boolean value indicates if the fast counter is a gated
                       counter (TRUE) or not (FALSE).
         """
-        self.GATED = gated
+        self.gated = gated
         self.change_sweep_mode(gated)
-        return self.GATED
+        return self.gated
 
     def get_data_trace(self):
         """
@@ -395,7 +396,7 @@ class FastComtec(Base, FastCounterInterface):
         self.dll.GetSettingData(ctypes.byref(setting), 0)
         N = setting.range
 
-        if self.GATED:
+        if self.gated:
             bsetting=BOARDSETTING()
             self.dll.GetMCSSetting(ctypes.byref(bsetting), 0)
             H = bsetting.cycles
@@ -409,7 +410,7 @@ class FastComtec(Base, FastCounterInterface):
         self.dll.LVGetDat(ptr, 0)
         time_trace = np.int64(data)
 
-        if self.GATED and self.timetrace_tmp != []:
+        if self.gated and self.timetrace_tmp != []:
             time_trace = time_trace + self.timetrace_tmp
 
         return time_trace
@@ -420,7 +421,7 @@ class FastComtec(Base, FastCounterInterface):
 
     def get_data_testfile(self):
         ''' Load data test file '''
-        data = np.loadtxt(os.path.join(self.get_main_dir(), 'tools', 'FastComTec_demo_timetrace.asc'))
+        data = np.loadtxt(os.path.join(get_main_dir(), 'tools', 'FastComTec_demo_timetrace.asc'))
         time.sleep(0.5)
         return data
 
@@ -454,10 +455,10 @@ class FastComtec(Base, FastCounterInterface):
         The binwidth is converted into to an appropiate bitshift defined as
         2**bitshift*minimal_binwidth.
         """
-        bitshift = int(np.log2(binwidth/self.MINIMAL_BINWIDTH))
+        bitshift = int(np.log2(binwidth/self.minimal_binwidth))
         new_bitshift=self.set_bitshift(bitshift)
 
-        return self.MINIMAL_BINWIDTH*(2**new_bitshift)
+        return self.minimal_binwidth*(2**new_bitshift)
 
     #TODO: Check such that only possible lengths are set.
     def set_length(self, length_bins, preset=None, cycles=None):
@@ -507,14 +508,14 @@ class FastComtec(Base, FastCounterInterface):
             cmd = 'prena={0}'.format(hex(16)) #To select starts preset
             # cmd = 'prena={0}'.format(hex(4)) #To select sweeps preset
             self.dll.RunCmd(0, bytes(cmd, 'ascii'))
-            self.GATED = True
+            self.gated = True
         else:
             # fastcomtch standard settings for ungated acquisition (check manual)
             cmd = 'sweepmode={0}'.format(hex(1978496))
             self.dll.RunCmd(0, bytes(cmd, 'ascii'))
             cmd = 'prena={0}'.format(hex(0))
             self.dll.RunCmd(0, bytes(cmd, 'ascii'))
-            self.GATED = False
+            self.gated = False
         return gated
 
     def change_save_mode(self, mode):

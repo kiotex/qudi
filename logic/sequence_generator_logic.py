@@ -30,7 +30,7 @@ import time
 
 from qtpy import QtCore
 from collections import OrderedDict
-from core.module import StatusVar
+from core.module import StatusVar, ConfigOption
 from core.util.modules import get_home_dir
 from core.util.modules import get_main_dir
 
@@ -72,6 +72,7 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
     laser_channel = StatusVar('laser_channel', 'd_ch1')
     amplitude_dict = StatusVar(
         'amplitude_dict',
+
         OrderedDict({'a_ch1': 0.25, 'a_ch2': 0.25, 'a_ch3': 0.25, 'a_ch4': 0.25}))
     # sample_rate = StatusVar('sample_rate', 1.2e9)
     waveform_format = StatusVar('waveform_format', 'wfm')
@@ -188,6 +189,9 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
         self._get_sequences_from_file()
 
         self._attach_predefined_methods()
+
+        if self.waveform_format is None:
+            self.waveform_format = self._config_waveform_format
 
         self.analog_channels = len([chnl for chnl in self.activation_config if 'a_ch' in chnl])
         self.digital_channels = len([chnl for chnl in self.activation_config if 'd_ch' in chnl])
@@ -760,7 +764,7 @@ class SequenceGeneratorLogic(GenericLogic, SamplingFunctions, SamplesWriteMethod
 
         # convert digital rising indices to numpy.ndarrays
         for chnl in range(len(digital_rising_bins)):
-            digital_rising_bins[chnl] = np.array(digital_rising_bins[chnl], dtype=int)
+            digital_rising_bins[chnl] = np.array(digital_rising_bins[chnl], dtype=np.int64)
 
         return number_of_samples, total_elements, elements_length_bins, digital_rising_bins
 

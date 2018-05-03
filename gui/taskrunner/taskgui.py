@@ -48,7 +48,7 @@ class TaskGui(GUIBase):
         """
         self._mw = TaskMainWindow()
         self.restoreWindowPos(self._mw)
-        self.logic = self.get_connector('tasklogic')
+        self.logic = self.tasklogic()
         self._mw.taskTableView.setModel(self.logic.model)
         self._mw.taskTableView.clicked.connect(self.setRunToolState)
         self._mw.startpushbutton.clicked.connect(self.periodic_focusing)

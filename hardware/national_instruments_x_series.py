@@ -161,7 +161,7 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
     _scanner_counter_channels = ConfigOption('scanner_counter_channels', [], missing='warn')
     _scanner_voltage_ranges = ConfigOption('scanner_voltage_ranges', missing='error')
     _scanner_position_ranges = ConfigOption('scanner_position_ranges', missing='error')
-
+    _laser_channel = ConfigOption('laser_ao', None)
     # odmr
     _odmr_trigger_channel = ConfigOption('odmr_trigger_channel', missing='error')
 
@@ -190,98 +190,8 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
         self._odmr_length = None
         self._gated_counter_daq_task = None
 
-        config = self.getConfiguration()
-
-        self._scanner_ao_channels = []
-        self._voltage_range = []
-        self._position_range = []
-        self._current_position = []
-        self._counter_channels = []
-        self._scanner_counter_channels = []
-        self._photon_sources = []
-        self._laser_channel = []
-
         # handle all the parameters given by the config
-        if 'scanner_x_ao' in config.keys():
-            self._scanner_ao_channels.append(config['scanner_x_ao'])
-            self._current_position.append(0)
-            self._position_range.append([0, 50e-6])
-            self._voltage_range.append([0, 10])
-            if 'scanner_y_ao' in config.keys():
-                self._scanner_ao_channels.append(config['scanner_y_ao'])
-                self._current_position.append(0)
-                self._position_range.append([0, 50e-6])
-                self._voltage_range.append([0, 10])
-                if 'scanner_z_ao' in config.keys():
-                    self._scanner_ao_channels.append(config['scanner_z_ao'])
-                    self._current_position.append(0)
-                    self._position_range.append([-25e-6, 25e-6])
-                    self._voltage_range.append([0, 10])
-                    if 'scanner_a_ao' in config.keys():
-                        self._scanner_ao_channels.append(config['scanner_a_ao'])
-                        self._current_position.append(0)
-                        self._position_range.append([0, 50e-6])
-                        self._voltage_range.append([0, 10])
-        if 'laser_ao' in config.keys():
-            self._laser_channel.append(config['laser_ao'])
-
-        if len(self._scanner_ao_channels) < 1:
-            self.log.error(
-                'Not enough scanner channels found in the configuration!\n'
-                'Be sure to start with scanner_x_ao\n'
-                'Assign to that parameter an appropriate channel from your NI Card, '
-                'otherwise you cannot control the analog channels!')
-
-        if 'photon_source' in config.keys():
-            self._photon_sources.append(config['photon_source'])
-            n = 1
-            while 'photon_source{0}'.format(n) in config.keys():
-                self._photon_sources.append(config['photon_source{0}'.format(n)])
-                n += 1
-        else:
-            self.log.error(
-                'No parameter "photon_source" configured.\n'
-                'Assign to that parameter an appropriated channel from your NI Card!')
-
-        if 'counter_channel' in config.keys():
-            self._counter_channels.append(config['counter_channel'])
-            n = 1
-            while 'counter_channel{0}'.format(n) in config.keys():
-                self._counter_channels.append(config['counter_channel{0}'.format(n)])
-                n += 1
-        else:
-            self.log.error(
-                'No parameter "counter_channel" configured.\n'
-                'Assign to that parameter an appropriate channel from your NI Card!')
-
-        if 'scanner_counter_channel' in config.keys():
-            self._scanner_counter_channels.append(config['scanner_counter_channel'])
-            n = 1
-            while 'scanner_counter_channel{0}'.format(n) in config.keys():
-                self._scanner_counter_channels.append(
-                    config['scanner_counter_channel{0}'.format(n)])
-                n += 1
-        else:
-            self.log.error(
-                'No parameter "scanner_counter_channel" configured.\n'
-                'Assign to that parameter an appropriate channel from your NI Card!')
-
-        if self._counting_edge_rising:
-            self._counting_edge = daq.DAQmx_Val_Rising
-        else:
-            self._counting_edge = daq.DAQmx_Val_Falling
-
-        if 'x_range' in config.keys() and len(self._position_range) > 0:
-            if float(config['x_range'][0]) < float(config['x_range'][1]):
-                self._position_range[0] = [float(config['x_range'][0]),
-                                           float(config['x_range'][1])]
-            else:
-                self.log.warning(
-                    'Configuration ({}) of x_range incorrect, taking [0,100e-6] instead.'
-                    ''.format(config['x_range']))
-        else:
-            if len(self._position_range) > 0:
-                self.log.warning('No x_range configured taking [0,100e-6] instead.')
+        self._current_position = np.zeros(len(self._scanner_ao_channels))
 
         if len(self._scanner_ao_channels) < len(self._scanner_voltage_ranges):
             self.log.error(
@@ -395,6 +305,7 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
 
         # Adjust the idle state if necessary
         my_idle = daq.DAQmx_Val_High if idle else daq.DAQmx_Val_Low
+
         try:
             # create task for clock
             task_name = 'ScannerClock' if scanner else 'CounterClock'
@@ -449,7 +360,7 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
         daq.DAQmxCreateTask('', daq.byref(self.LaserTask))
 
         daq.DAQmxCreateAOVoltageChan(self.LaserTask,
-                                    self._laser_channel[0],
+                                    self._laser_channel,
                                     'Scanner AO Channel {0}'.format(3),
                                     -10.0,
                                     10.0,
@@ -2258,3 +2169,52 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
             daq.DAQmxStopTask(self.digital_out_task)
             daq.DAQmxClearTask(self.digital_out_task)
             return 0
+
+    # ======================== Apply 3Hz sine wave ==========================
+
+    def generate_sinewave(self, num_samples = 5000):
+
+        AO_data = numpy.sin(2. * numpy.pi / (num_samples / 10.) * numpy.arange(num_samples))
+
+        self.AO_task = daq.TaskHandle()
+        daq.DAQmxCreateTask('', daq.byref(self.AO_task))
+
+        daq.DAQmxCreateAOVoltageChan(self.AO_task,
+                                     self._scanner_ao_channels[1],
+                                     'Scanner AO Channel {0}'.format(3),
+                                     self._scanner_voltage_ranges[1][0],
+                                     self._scanner_voltage_ranges[1][1],
+                                     daq.DAQmx_Val_Volts,
+                                     '')
+
+        self._AONwritten = daq.int32()
+        # write the voltage instructions for the analog output to the hardware
+
+        daq.DAQmxWriteAnalogF64(
+            # write to this task
+            self.AO_task,
+            # length of the command (points)
+            AO_data.shape[0],
+            # start task immediately (True), or wait for software start (False)
+            False,
+            # maximal timeout in seconds for# the write process
+            self._RWTimeout,
+            # Specify how the samples are arranged: each pixel is grouped by channel number
+            daq.DAQmx_Val_GroupByChannel,
+            # the voltages to be written
+            AO_data,
+            # The actual number of samples per channel successfully written to the buffer
+            daq.byref(self._AONwritten),
+            # Reserved for future use. Pass NULL(here None) to this parameter
+            None)
+
+        num_written = self._AONwritten.value
+
+        daq.DAQmxStartTask(self.AO_task)
+
+        daq.DAQmxWaitUntilTaskDone(
+            # define task
+            self.AO_task,
+            # Maximum timeout for the counter times the positions. Unit is seconds.
+            10.)
+        daq.DAQmxClearTask(self.AO_task)

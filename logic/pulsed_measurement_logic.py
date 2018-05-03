@@ -134,6 +134,8 @@ class PulsedMeasurementLogic(GenericLogic):
         self.elapsed_time = 0
         self.elapsed_time_str = '00:00:00:00'
 
+        self.elapsed_sweeps = 0.0
+
         # threading
         self.threadlock = Mutex()
 
@@ -701,6 +703,7 @@ class PulsedMeasurementLogic(GenericLogic):
                 self.module_state.lock()
                 self.elapsed_time = 0.0
                 self.elapsed_time_str = '00:00:00:00'
+                self.elapsed_sweeps = 0.0
                 self.sigElapsedTimeUpdated.emit(self.elapsed_time, self.elapsed_time_str)
                 # Clear previous fits
                 self.fc.clear_result()
@@ -729,7 +732,7 @@ class PulsedMeasurementLogic(GenericLogic):
                 self.pulse_generator_on()
 
                 self.start_time = time.time()
-
+                self.previous_sweeps=0.0
                 # set analysis_timer
                 if self.timer_interval > 0:
                     self.analysis_timer = QtCore.QTimer()
@@ -750,6 +753,11 @@ class PulsedMeasurementLogic(GenericLogic):
 
                 # get raw data from fast counter
                 fc_data = netobtain(self._fast_counter_device.get_data_trace())
+
+                # get elapsed sweeps
+                runtime, cycles = self._fast_counter_device.GetStatus()
+                sweeps = cycles / self._fast_counter_device.get_data_trace().shape[0]
+                self.elapsed_sweeps = self.previous_sweeps + sweeps
 
                 # add old raw data from previous measurements if necessary
                 if self.recalled_raw_data is not None:
@@ -817,7 +825,7 @@ class PulsedMeasurementLogic(GenericLogic):
             self.elapsed_time_str += str(int(self.elapsed_time) % 60).zfill(2) # seconds
 
             # emit signals
-            self.sigElapsedTimeUpdated.emit(self.elapsed_time, self.elapsed_time_str)
+            self.sigElapsedTimeUpdated.emit(self.elapsed_sweeps, self.elapsed_time_str)
             self.sigSignalDataUpdated.emit(self.signal_plot_x, self.signal_plot_y,
                                            self.signal_plot_y2, self.measuring_error_plot_y,
                                            self.measuring_error_plot_y2, self.signal_fft_x,

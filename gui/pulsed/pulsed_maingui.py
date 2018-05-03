@@ -1843,7 +1843,7 @@ class PulsedMeasurementGui(GUIBase):
         self._pa.fit_param_fit_func_ComboBox.blockSignals(False)
         return
 
-    def elapsed_time_updated(self, elapsed_time, elapsed_time_str):
+    def elapsed_time_updated(self, elapsed_sweeps, elapsed_time_str):
         """
         Refreshes the elapsed time and sweeps of the measurement.
 
@@ -1855,6 +1855,7 @@ class PulsedMeasurementGui(GUIBase):
         self._pa.time_param_elapsed_time_LineEdit.blockSignals(True)
         # Set widgets
         self._pa.time_param_elapsed_time_LineEdit.setText(elapsed_time_str)
+        self._pa.time_param_elapsed_sweep_ScienSpinBox.setValue(elapsed_sweeps)
         # unblock signals
         self._pa.time_param_elapsed_time_LineEdit.blockSignals(True)
         return

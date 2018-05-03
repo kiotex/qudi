@@ -207,7 +207,7 @@ class ODMRLogic(GenericLogic):
         """ Initializing the ODMR plots (line and matrix). """
 
         self.odmr_plot_x = np.arange(self.mw_start, self.mw_stop + self.mw_step, self.mw_step)+0.1e+9
-        self.odmr_plot_y = np.zeros(self.odmr_plot_x.size)
+        self.odmr_plot_y = np.zeros([len(self.get_odmr_channels()), self.odmr_plot_x.size])
 
         self.odmr_fit_x = np.arange(self.mw_start, self.mw_stop + self.mw_step, self.mw_step)
         self.odmr_fit_y = np.zeros(self.odmr_fit_x.size)
@@ -482,7 +482,7 @@ class ODMRLogic(GenericLogic):
         """
         with self.threadlock:
             if self.module_state() == 'locked':
-                self.log.error('Can not start ODMR scan. Logic is already locked.')
+                self.log.error('Can not start lockedODMR scan. Logic is already locked.')
                 return -1
 
             self.module_state.lock()
@@ -517,12 +517,8 @@ class ODMRLogic(GenericLogic):
             mode, is_running = self.mw_sweep_on()
             if not is_running:
                 self._stop_odmr_counter()
-<<<<<<< HEAD
                 self._pulse_generator_device.pulser_off()
-                self.unlock()
-=======
                 self.module_state.unlock()
->>>>>>> upstream/master
                 return -1
 
             self._initialize_odmr_plots()

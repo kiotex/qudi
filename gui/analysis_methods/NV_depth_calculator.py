@@ -225,7 +225,7 @@ class NVdepthGui(GUIBase):
         C0_down = C0_up * (1 - 0.01 * self._mw.contrast.value())
         counts = self.counts2 - self.counts1
 
-        self.T = self.time * 8 * self._mw.sequence_order.value()
+        self.T = self.time * 16 * self._mw.sequence_order.value()
 
         self.normalized_counts = (counts) / (C0_up - C0_down)
 
@@ -479,7 +479,7 @@ class NVdepthGui(GUIBase):
         C0_down = C0_up * (1 - 0.01 * self._mw.contrast.value())
         counts = self.counts2 - self.counts1
 
-        self.T = self.time * 8 * self._mw.sequence_order.value()
+        self.T = self.time * 16 * self._mw.sequence_order.value()
 
         self.normalized_counts = (counts) / (C0_up - C0_down)
 
@@ -502,15 +502,15 @@ class NVdepthGui(GUIBase):
         dt = 1e-9
         n = int(tau / dt)
 
-        v = np.zeros(8 * self._mw.sequence_order.value() * n)
+        v = np.zeros(16 * self._mw.sequence_order.value() * n)
 
-        T = np.linspace(0, dt * n * 8 * self._mw.sequence_order.value(), num=8 * self._mw.sequence_order.value() * n)
+        T = np.linspace(0, dt * n * 16 * self._mw.sequence_order.value(), num=16 * self._mw.sequence_order.value() * n)
         v[:n // 2] = 1
         k = n / 2 + 1
-        for j in range(8 * self._mw.sequence_order.value() - 1):
+        for j in range(16 * self._mw.sequence_order.value() - 1):
             v[(n // 2 + j * n):(n // 2 + j * n + n)] = (-1) ** (j + 1)
             k = k + 1
-        v[8 * self._mw.sequence_order.value() * n - n // 2:8 * self._mw.sequence_order.value() * n] = np.ones((n // 2,), dtype=np.int)
+        v[16 * self._mw.sequence_order.value() * n - n // 2:16 * self._mw.sequence_order.value() * n] = np.ones((n // 2,), dtype=np.int)
         return T, v
 
     def _fourier_transform(self, tau):
@@ -520,7 +520,7 @@ class NVdepthGui(GUIBase):
 
         signalFFT = np.fft.fft(v, g)
 
-        yf = (np.abs(signalFFT) ** 2) * (1e-9) / (8 * self._mw.sequence_order.value())
+        yf = (np.abs(signalFFT) ** 2) * (1e-9) / (16 * self._mw.sequence_order.value())
         xf = np.fft.fftfreq(g, 1e-9)
 
         self.FFy = yf[0:g]  # take only real part

@@ -1103,7 +1103,7 @@ class ConfocalLogic(GenericLogic):
 
         # Create image plot
         cfimage = ax.imshow(image_data,
-                            cmap=plt.get_cmap('inferno'), # reference the right place in qd
+                            cmap=plt.get_cmap('rainbow'), # reference the right place in qd
                             origin="lower",
                             vmin=draw_cb_range[0],
                             vmax=draw_cb_range[1],

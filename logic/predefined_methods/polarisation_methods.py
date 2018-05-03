@@ -739,11 +739,11 @@ def generate_HH_SMART_waiting(self, name='HHSMWAIT', rabi_period=200e-9, spinloc
     lock = waveform(self, [init_element, delay2_element, waiting_element, pihalf_x_element, sl_element, pihalf_x_element, laser_element, delay_element,
                                waiting_element, idle_element], 'Lock')
 
-    subsequence_list.append((lock, {'repetitions': 100000, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+    subsequence_list.append((lock, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
 
     lock2 = waveform(self, [init_element, delay2_element, waiting_element, pihalf_x_element, sl_element, pi3half_element, laser_element, delay_element,
                                     waiting_element, idle_element], 'Lock2')
-    subsequence_list.append((lock2, {'repetitions': 100000, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+    subsequence_list.append((lock2, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
 
     mainsequence_list.extend(subsequence_list)
 

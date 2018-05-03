@@ -418,7 +418,7 @@ class MagnetControlGui(GUIBase):
 
     def ready_clicked(self):
         """ Stopp the scan if the state has switched to ready. """
-        if self._magnet_logic.getState() == 'idle':
+        if self._magnet_logic.module_state() == 'idle':
             self._magnet_logic.stopRequested=True
             self.enable_scan_actions()
 

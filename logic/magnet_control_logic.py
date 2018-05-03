@@ -228,12 +228,12 @@ class MagnetControlLogic(GenericLogic):
         """Starts scanning
         """
         with self.threadlock:
-            if self.getState() == 'locked':
+            if self.module_state() == 'locked':
                 self.log.error('Can not start fluorescence scan. Logic is already locked.')
 
                 return -1
 
-            self.lock()
+            self.module_state.lock()
             self.stopRequested = False
 
             self.step_x = int(self.step_x/ 2e-4) * 2e-4
@@ -258,7 +258,7 @@ class MagnetControlLogic(GenericLogic):
 
         with self.threadlock:
             # If the odmr measurement is not running do nothing
-            if self.getState() != 'locked':
+            if self.module_state() != 'locked':
                 return
 
             # Stop measurement if stop has been requested
@@ -266,7 +266,7 @@ class MagnetControlLogic(GenericLogic):
                 self.stopRequested = False
                 self._magnetstage.stop_motion(1)
                 self.signal_stop_scanning.emit()
-                self.unlock()
+                self.module_state.unlock()
                 return
 
             # Move the magnet
@@ -277,7 +277,7 @@ class MagnetControlLogic(GenericLogic):
             if self.curr_x_pos > (self.x_end+self.step_x):
                 self.stopRequested = False
                 self._magnetstage.stop_motion(1)
-                self.unlock()
+                self.module_state.unlock()
                 self.signal_stop_scanning.emit()
                 return
 
@@ -287,7 +287,7 @@ class MagnetControlLogic(GenericLogic):
                 self.i=self.i+1
 
             else:
-                self.unlock()
+                self.module_state.unlock()
                 self.signal_stop_scanning.emit()
                 return
 
@@ -302,11 +302,11 @@ class MagnetControlLogic(GenericLogic):
         """Starts scanning
         """
         with self.threadlock:
-            if self.getState() == 'locked':
+            if self.module_state() == 'locked':
                 self.log.error('Can not start ODMR scan. Logic is already locked.')
                 return -1
 
-            self.lock()
+            self.module_state.lock()
             self.stopRequested = False
 
             self.step_y = int(self.step_y/ 2e-4) * 2e-4
@@ -331,7 +331,7 @@ class MagnetControlLogic(GenericLogic):
 
         with self.threadlock:
             # If the odmr measurement is not running do nothing
-            if self.getState() != 'locked':
+            if self.module_state() != 'locked':
                 return
 
             # Stop measurement if stop has been requested
@@ -339,7 +339,7 @@ class MagnetControlLogic(GenericLogic):
                 self.stopRequested = False
                 self._magnetstage.stop_motion(2)
                 self.signal_stop_scanning.emit()
-                self.unlock()
+                self.module_state.unlock()
                 return
 
             # Move the magnet
@@ -350,7 +350,7 @@ class MagnetControlLogic(GenericLogic):
             if self.curr_y_pos > (self.y_end+self.step_y):
                 self.stopRequested = False
                 self._magnetstage.stop_motion(2)
-                self.unlock()
+                self.module_state.unlock()
                 self.signal_stop_scanning.emit()
                 return
 
@@ -359,7 +359,7 @@ class MagnetControlLogic(GenericLogic):
                 self.yfluor_plot_y[self.i] = self._perform_fluorescence_measure()[0]
                 self.i=self.i+1
             else:
-                self.unlock()
+                self.module_state.unlock()
                 self.signal_stop_scanning.emit()
                 return
 
@@ -375,7 +375,7 @@ class MagnetControlLogic(GenericLogic):
         @return int: error code (0:OK, -1:error)
         """
         with self.threadlock:
-            if self.getState() == 'locked':
+            if self.module_state() == 'locked':
                 self.stopRequested = True
         self.signal_stop_scanning.emit()
         return 0

@@ -548,8 +548,6 @@ class FastComtec(Base, FastCounterInterface):
             return (word & int('ffff',16)) * 4.096 / int('ffff',16) - 2.048
         return WordToFloat(setting.dac0), WordToFloat(setting.dac1)
 
-    #used in one script for SSR
-    #Todo: Remove
     def Running(self):
         s = self.GetStatus()
         return s.started
@@ -557,7 +555,7 @@ class FastComtec(Base, FastCounterInterface):
     def GetStatus(self):
         status = AcqStatus()
         self.dll.GetStatusData(ctypes.byref(status), 0)
-        return status
+        return status.runtime, status.sweeps
 
     def load_setup(self, configname):
         cmd = 'loadcnf={0}'.format(configname)

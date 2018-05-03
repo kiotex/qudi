@@ -639,14 +639,14 @@ class PulsedMasterLogic(GenericLogic):
         self.sigMeasurementStatusUpdated.emit(is_running, is_paused)
         return
 
-    def measurement_time_updated(self, elapsed_time, elapsed_time_string):
+    def measurement_time_updated(self, elapsed_sweeps, elapsed_time_string):
         """
 
         @param elapsed_time:
         @param elapsed_time_string:
         @return:
         """
-        self.sigElapsedTimeUpdated.emit(elapsed_time, elapsed_time_string)
+        self.sigElapsedTimeUpdated.emit(elapsed_sweeps, elapsed_time_string)
         return
 
     def toggle_pulse_generator(self, switch_on):

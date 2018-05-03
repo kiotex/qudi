@@ -455,8 +455,6 @@ class ConfocalGui(GUIBase):
         self._mw.y_SliderWidget.setRange(0, num_of_points_y)
         self._mw.z_SliderWidget.setRange(0, num_of_points_z)
 
-        self._mw.laserSlider.setRange(-10.0, 10.0)
-
         # Just to be sure, set also the possible maximal values for the spin
         # boxes of the current values:
         self._mw.x_current_InputWidget.setRange(self._scanning_logic.x_range[0],
@@ -467,11 +465,6 @@ class ConfocalGui(GUIBase):
                                                 self._scanning_logic.z_range[1])
 
         self._mw.laser_voltage.setRange(-10.0, 10.0)
-
-        # set minimal steps for the current value
-        self._mw.x_current_InputWidget.setOpts(minStep=1e-6)
-        self._mw.y_current_InputWidget.setOpts(minStep=1e-6)
-        self._mw.z_current_InputWidget.setOpts(minStep=1e-6)
 
         # set the maximal ranges for the imagerange from the logic:
         self._mw.x_min_InputWidget.setRange(self._scanning_logic.x_range[0],
@@ -1394,7 +1387,6 @@ class ConfocalGui(GUIBase):
         """ The user changed the number in the z position spin box, adjust all
            other GUI elements."""
         power = self._mw.laser_voltage.value()
-        self.update_laserSlider()
         self._scanning_logic.set_laser_power(power)
 
     def update_input_x(self, x_pos):
@@ -1478,13 +1470,6 @@ class ConfocalGui(GUIBase):
         @param float z_pos: z position in m
         """
         self._mw.z_SliderWidget.setValue((z_pos - self._scanning_logic.z_range[0]) / self.slider_res)
-
-    def update_laserSlider(self):
-        """ Update the laser power when a change happens.
-
-        @param float z_pos: z position in m
-        """
-        self._mw.laserSlider.setValue(self._scanning_logic.laser_power)
 
     def change_xy_resolution(self):
         """ Update the xy resolution in the logic according to the GUI.

@@ -1212,6 +1212,16 @@
        </property>
       </widget>
      </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Laser V</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QDoubleSpinBox" name="laser_voltage"/>
+     </item>
     </layout>
    </widget>
   </widget>
@@ -2618,7 +2628,7 @@
      <x>-1</x>
      <y>-1</y>
     </hint>
-<hint type="destinationlabel">
+    <hint type="destinationlabel">
      <x>1096</x>
      <y>853</y>
     </hint>

@@ -574,7 +574,7 @@
     </widget>
    </item>
    <item row="4" column="5">
-    <widget class="QSpinBox" name="time_param_elapsed_sweep_SpinBox">
+    <widget class="QSpinBox" name="time_param_elapsed_sweep_ScienSpinBox">
      <property name="readOnly">
       <bool>true</bool>
      </property>
@@ -631,7 +631,7 @@
   <tabstop>pulse_analysis_second_PlotWidget</tabstop>
   <tabstop>time_param_expected_dur_DoubleSpinBox</tabstop>
   <tabstop>time_param_elapsed_time_LineEdit</tabstop>
-  <tabstop>time_param_elapsed_sweep_SpinBox</tabstop>
+  <tabstop>time_param_elapsed_sweep_ScienSpinBox</tabstop>
   <tabstop>time_param_ana_periode_DoubleSpinBox</tabstop>
  </tabstops>
  <resources/>

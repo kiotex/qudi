@@ -17,7 +17,7 @@ class SMC(Base, MagnetController):
     def on_activate(self):
 
         self.rm=visa.ResourceManager()
-        self.connect=self.rm.open_resource(u'ASRL4::INSTR', baud_rate=57600, timeout=2000, data_bits=8, write_termination='\r\n')
+        self.connect=self.rm.open_resource(u'ASRL3::INSTR', baud_rate=57600, timeout=3500, data_bits=8, write_termination='\r\n')
 
     def on_deactivate(self):
 

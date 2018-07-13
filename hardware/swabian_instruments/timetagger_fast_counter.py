@@ -111,7 +111,7 @@ class TimeTaggerFastCounter(Base, FastCounterInterface):
         self.pulsed.clear()
         self.pulsed = None
 
-    def configure(self, bin_width_s, record_length_s, number_of_gates=0):
+    def configure(self, bin_width_s, record_length_s, number_of_gates):
 
         """ Configuration of the fast counter.
 
@@ -136,7 +136,7 @@ class TimeTaggerFastCounter(Base, FastCounterInterface):
             tagger=self._tagger,
             click_channel=self._channel_apd,
             start_channel=self._channel_detect,
-            next_channel=self._channel_detect,
+            next_channel=self._channel_sequence,
             sync_channel=tt.CHANNEL_UNUSED,
             binwidth=int(np.round(self._bin_width * 1000)),
             n_bins=int(self._record_length),

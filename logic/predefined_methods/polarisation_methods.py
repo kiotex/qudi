@@ -475,20 +475,16 @@ def generate_Hartmann_Hahn_tau_sequence(self, name='HHtauseq', rabi_period=200e-
 
     # create the static waveform elements
     # get waiting element
-    waiting_element = self._get_idle_element(wait_time, 0.0, False, gate_count_channel)
+    waiting_element = self._get_idle_element(wait_time, 0.0, False)
     # get laser and delay element
-    laser_element, delay_element = self._get_laser_element(laser_length, 0.0, False, delay_length, channel_amp,
-                                                           gate_count_channel)
-    readout = waveform(self, [laser_element, delay_element, waiting_element], 'READOUT')
-
+    laser_element, delay_element = self._get_laser_element(laser_length, 0.0, False, delay_length, channel_amp)
     # get pihalf x element
-    pihalf_x_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0,
-                                            gate_count_channel)
-    flip1 = waveform(self, [pihalf_x_element], 'FLIP1')
+    pihalf_x_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0)
+    last_pihalf_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0,
+                                               gate_count_channel)
     # get -x pihalf (3pihalf) element
     pi3half_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp,
                                            mw_freq, 180., gate_count_channel)
-    flip2 = waveform(self, [pi3half_element], 'FLIP2')
     # Create sequence
     mainsequence_list = []
     i = 0
@@ -497,10 +493,10 @@ def generate_Hartmann_Hahn_tau_sequence(self, name='HHtauseq', rabi_period=200e-
         subsequence_list = []
         # get spinlock element
         sl_element = self._get_mw_element(t, 0.0, mw_channel, True, spinlock_amp, mw_freq,
-                                       90.0, gate_count_channel)
+                                       90.0)
         # make sequence waveform
         name1 = 'LOCK_%02i' % i
-        lock = waveform(self, [pihalf_x_element, sl_element, pihalf_x_element, laser_element, delay_element, waiting_element], name1)
+        lock = waveform(self, [pihalf_x_element, sl_element, last_pihalf_element, laser_element, delay_element, waiting_element], name1)
         subsequence_list.append((lock, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
 
         if alternating:
@@ -1073,15 +1069,15 @@ def generate_HH_amp_sweep_sequence(self, name='HH_amp_sweep', rabi_period=200e-9
 
     # create the static waveform elements
     # get waiting element
-    waiting_element = self._get_idle_element(wait_time, 0.0, False, gate_count_channel)
+    waiting_element = self._get_idle_element(wait_time, 0.0, False)
     # get laser and delay element
-    laser_element, delay_element = self._get_laser_element(laser_length, 0.0, False, delay_length, channel_amp,
-                                                           gate_count_channel)
+    laser_element, delay_element = self._get_laser_element(laser_length, 0.0, False, delay_length, channel_amp)
     readout = waveform(self, [laser_element, delay_element, waiting_element], 'READOUT')
 
     # get pihalf x element
-    pihalf_x_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0,
-                                            gate_count_channel)
+    pihalf_x_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0)
+    last_pihalf_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0,
+                                               gate_count_channel)
     # get -x pihalf (3pihalf) element
     pi3half_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp,
                                            mw_freq, 180., gate_count_channel)
@@ -1089,24 +1085,20 @@ def generate_HH_amp_sweep_sequence(self, name='HH_amp_sweep', rabi_period=200e-9
     mainsequence_list = []
     i = 0
 
-    waiting_repetitions = 100
-    diffusion = waveform(self, [waiting_element], 'DIFFUSION')
-
     for spinlock_amp in mw_array:
         subsequence_list = []
 
         # get spinlock element
-        sl_element = self._get_mw_element(tau, 0.0, mw_channel, True, spinlock_amp, mw_freq,
-                                          90.0, gate_count_channel)
+        sl_element = self._get_mw_element(tau, 0.0, mw_channel, True, spinlock_amp, mw_freq, 90.0)
         name1 = 'LOCK%03i' % i
-        lock = waveform(self, [pihalf_x_element, sl_element, pi3half_element], name1)
+        lock = waveform(self, [pihalf_x_element, sl_element, last_pihalf_element], name1)
 
         subsequence_list.append((lock, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
         subsequence_list.append((readout, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
 
         if alternating:
             name2 = 'LOCK2%03i' % i
-            lock2 = waveform(self, [pihalf_x_element, sl_element, pihalf_x_element], name2)
+            lock2 = waveform(self, [pihalf_x_element, sl_element, pi3half_element], name2)
 
             subsequence_list.append((lock2, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
             subsequence_list.append((readout, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
@@ -1212,7 +1204,7 @@ def generate_HH_polarization_build_up(self, name='pol_buildup', rabi_period=200e
 
 
 def generate_PROPI(self, name='propi', rabi_period=200e-9, spinlock_amp=0.2, mw_freq=100e6, mw_amp=0.25, tau=30*1e-6,
-                   N = 50, M = 50, points = 50, mw_channel='a_ch1', laser_length=3.0e-6, channel_amp=2.0, delay_length=0.7e-6,
+                   N = 50, M = 50, step_M = 1, mw_channel='a_ch1', laser_length=3.0e-6, channel_amp=2.0, delay_length=0.7e-6,
                    wait_time=1.0e-6, sync_trig_channel='', gate_count_channel='d_ch2', alternating = True):
     """
 
@@ -1228,69 +1220,90 @@ def generate_PROPI(self, name='propi', rabi_period=200e-9, spinlock_amp=0.2, mw_
     if err_code != 0:
         return
 
-    m = np.arange(1, M, points)
+    m = np.arange(1, M+1, step_M)
 
     # create the static waveform elements
     # get waiting element
-    waiting_element = self._get_idle_element(wait_time, 0.0, False, gate_count_channel)
+    waiting_element = self._get_idle_element(wait_time, 0.0, False)
     # get laser and delay element
-    laser_element, delay_element = self._get_laser_element(laser_length, 0.0, False, delay_length, channel_amp,
-                                                           gate_count_channel)
-    readout = waveform(self, [laser_element, delay_element, waiting_element], 'READOUT')
-
-    init_element, delay2_element = self._get_laser_init_element(laser_length, 0.0, False, delay_length, channel_amp,
-                                                           gate_count_channel)
+    laser_element, delay_element = self._get_laser_element(laser_length, 0.0, False, delay_length, channel_amp)
+    init_element, delay2_element = self._get_laser_init_element(laser_length, 0.0, False, delay_length, channel_amp)
 
     # get pihalf x element
-    pihalf_x_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0,
-                                            gate_count_channel)
-    # flip1 = waveform(self, [pihalf_x_element], 'FLIP1')
+    pihalf_x_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0)
+    last_pihalf_x_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp, mw_freq, 0.0,
+                                                 gate_count_channel)
+
     # get -x pihalf (3pihalf) element
     pi3half_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp,
+                                           mw_freq, 180.)
+    last_pi3half_element = self._get_mw_element(rabi_period / 4, 0.0, mw_channel, False, mw_amp,
                                            mw_freq, 180., gate_count_channel)
-    # flip2 = waveform(self, [pi3half_element], 'FLIP2')
     # Create sequence
-    mainsequence_list = []
-    i = 0
 
-    sl_element = self._get_mw_element(tau, 0.0, mw_channel, True, spinlock_amp, mw_freq, 90.0, gate_count_channel)
+    sl_element = self._get_mw_element(tau, 0.0, mw_channel, False, spinlock_amp, mw_freq, 90.0)
+    lock = waveform(self, [init_element, delay2_element, waiting_element, pihalf_x_element, sl_element,
+                           pihalf_x_element], 'lock_up')
+    last_lock = waveform(self, [init_element, delay2_element, waiting_element, pihalf_x_element, sl_element,
+                           last_pihalf_x_element], 'last_lock')
+    repolarization = waveform(self, [init_element, delay2_element, waiting_element,
+                                     pi3half_element, sl_element, pihalf_x_element], 'repol_up')
+    last_repolarization = waveform(self, [laser_element, delay_element, waiting_element,
+                                     pi3half_element, sl_element, last_pihalf_x_element], 'repol_up2')
 
-    for j in m:
+    repolarization2 = waveform(self, [init_element, delay2_element, waiting_element, waiting_element,
+                                      pi3half_element, sl_element, pi3half_element], 'repol_down')
 
-        subsequence_list = []
-        # make sequence waveform
-        name1 = 'up_%04i' % i
-        lock = waveform(self, [init_element, delay2_element, waiting_element, pihalf_x_element, sl_element,
-                               pihalf_x_element], name1)
-        subsequence_list.append((lock, {'repetitions': N, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+    last_repolarization2 = waveform(self, [laser_element, delay_element, waiting_element,
+                                      pi3half_element, sl_element, last_pi3half_element], 'repol_down2')
 
-        name2 = 'down_%04i' % i
-        lock2 = waveform(self, [init_element, delay2_element, waiting_element,
-                                pi3half_element, sl_element, pi3half_element], name2)
-        subsequence_list.append((lock2, {'repetitions': j, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
-        subsequence_list.append((readout, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+
+
+    last_repolarization3 = waveform(self, [laser_element, delay_element, waiting_element,
+                                          pi3half_element, sl_element, pihalf_x_element], 'repol_up3')
+    last_repolarization4 = waveform(self, [laser_element, delay_element, waiting_element,
+                                           pi3half_element, sl_element, pi3half_element], 'repol_down3')
+
+    subsequence_list = []
+    # make sequence waveform
+
+    if step_M==1:
+
+        subsequence_list.append((lock, {'repetitions': N-1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+        subsequence_list.append((last_lock, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+        subsequence_list.append((last_repolarization3, {'repetitions': M, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
 
         if alternating:
-            name3 = 'up2_%04i' % i
-            lock3 = waveform(self, [init_element, delay2_element, waiting_element, pihalf_x_element, sl_element,
-                                   pihalf_x_element], name3)
-            subsequence_list.append((lock3, {'repetitions': N, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
 
-            name4 = 'down2_%04i' % i
-            lock4 = waveform(self, [init_element, delay2_element, waiting_element,
-                                    pi3half_element, sl_element, pi3half_element], name4)
-            name5 = 'down3_%04i' % i
-            lock5 = waveform(self, [init_element, delay2_element, waiting_element,
-                                    pi3half_element, sl_element, pihalf_x_element], name5)
-            subsequence_list.append((lock4, {'repetitions': j-1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
-            subsequence_list.append((lock5, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
-            subsequence_list.append((readout, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+            subsequence_list.append((lock, {'repetitions': N - 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+            subsequence_list.append((last_lock, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+            subsequence_list.append((last_repolarization4, {'repetitions': M, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
 
-        i = i + 1
+    else:
 
-        mainsequence_list.extend(subsequence_list)
+        for j in m:
 
-    sequence = PulseSequence(name=name, ensemble_param_list=mainsequence_list, rotating_frame=True)
+            if j==1:
+                j=2
+
+            subsequence_list.append((lock, {'repetitions': N - 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+            subsequence_list.append((last_lock, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+            subsequence_list.append(
+                (repolarization, {'repetitions': int(j-1), 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+            subsequence_list.append(
+                (last_repolarization3, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+
+            if alternating:
+                subsequence_list.append(
+                    (lock, {'repetitions': N - 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+                subsequence_list.append(
+                    (last_lock, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+                subsequence_list.append(
+                    (repolarization2, {'repetitions': int(j-1), 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+                subsequence_list.append(
+                    (last_repolarization4, {'repetitions': 1, 'trigger_wait': 0, 'go_to': 0, 'event_jump_to': 0}))
+
+    sequence = PulseSequence(name=name, ensemble_param_list=subsequence_list, rotating_frame=True)
 
     sequence.sample_rate = self.sample_rate
     sequence.activation_config = self.activation_config
@@ -1412,6 +1425,7 @@ def _get_laser_element(self, length, increment, use_as_tick, delay_time=None, am
     if 'd_ch' in self.laser_channel:
         laser_index = digital_channels.index(self.laser_channel)
         laser_digital[laser_index] = True
+        laser_digital[digital_channels.index('d_ch3')] = True
     elif 'a_ch' in self.laser_channel:
         laser_index = analog_channels.index(self.laser_channel)
         laser_function[laser_index] = 'DC'

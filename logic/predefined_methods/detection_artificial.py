@@ -279,6 +279,7 @@ def _get_laser_element(self, length, increment, use_as_tick, delay_time=None, am
     if 'd_ch' in self.laser_channel:
         laser_index = digital_channels.index(self.laser_channel)
         laser_digital[laser_index] = True
+        laser_digital[digital_channels.index('d_ch3')] = True
     elif 'a_ch' in self.laser_channel:
         laser_index = analog_channels.index(self.laser_channel)
         laser_function[laser_index] = 'DC'

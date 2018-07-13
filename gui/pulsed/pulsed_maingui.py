@@ -980,6 +980,7 @@ class PulsedMeasurementGui(GUIBase):
 
     def load_block_in_editor(self, block_obj):
         self.block_editor.load_pulse_block(block_obj)
+        self.block_editor.load_pulse_block(block_obj)
         if block_obj is not None:
             self._pg.curr_block_name_LineEdit.setText(block_obj.name)
         return
@@ -2060,7 +2061,7 @@ class PulsedMeasurementGui(GUIBase):
         self._pulsed_master_logic.fast_counter_settings_changed(bin_width_s, record_length_s)
         return
 
-    def fast_counter_settings_updated(self, bin_width_s, record_length_s):
+    def fast_counter_settings_updated(self, bin_width_s, record_length_s, number_of_gates):
         """
 
         @param bin_width_s:

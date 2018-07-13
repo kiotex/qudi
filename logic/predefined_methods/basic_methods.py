@@ -173,10 +173,10 @@ def generate_rabi(self, name='rabi', tau_start=10.0e-9, tau_step=10.0e-9, number
     # get MW element
     mw_element = self._get_mw_element(tau_start, tau_step, mw_channel, True, mw_amp, mw_freq, 0.0, gate_count_channel)
     # get waiting element
-    waiting_element = self._get_idle_element(wait_time, 0.0, False, gate_count_channel)
+    waiting_element = self._get_idle_element(wait_time, 0.0, False)
     # get laser and delay element
     laser_element, delay_element = self._get_laser_element(laser_length, 0.0, False, delay_length,
-                                                           channel_amp, gate_count_channel)
+                                                           channel_amp)
 
     if sync_trig_channel is not None:
         # get sequence trigger element
@@ -758,6 +758,7 @@ def _get_laser_element(self, length, increment, use_as_tick, delay_time=None, am
     if 'd_ch' in self.laser_channel:
         laser_index = digital_channels.index(self.laser_channel)
         laser_digital[laser_index] = True
+        laser_digital[digital_channels.index('d_ch3')] = True
     elif 'a_ch' in self.laser_channel:
         laser_index = analog_channels.index(self.laser_channel)
         laser_function[laser_index] = 'DC'

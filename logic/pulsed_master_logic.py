@@ -57,7 +57,7 @@ class PulsedMasterLogic(GenericLogic):
     sigContinueMeasurement = QtCore.Signal()
     sigStartPulser = QtCore.Signal()
     sigStopPulser = QtCore.Signal()
-    sigFastCounterSettingsChanged = QtCore.Signal(float, float)
+    sigFastCounterSettingsChanged = QtCore.Signal(float, float, int)
     sigMeasurementSequenceSettingsChanged = QtCore.Signal(np.ndarray, int, float, list, bool)
     sigPulseGeneratorSettingsChanged = QtCore.Signal(float, str, dict, bool)
     sigUploadAsset = QtCore.Signal(str)
@@ -110,7 +110,7 @@ class PulsedMasterLogic(GenericLogic):
     sigFitUpdated = QtCore.Signal(str, np.ndarray, np.ndarray, object)
     sigMeasurementStatusUpdated = QtCore.Signal(bool, bool)
     sigPulserRunningUpdated = QtCore.Signal(bool)
-    sigFastCounterSettingsUpdated = QtCore.Signal(float, float)
+    sigFastCounterSettingsUpdated = QtCore.Signal(float, float, int)
     sigMeasurementSequenceSettingsUpdated = QtCore.Signal(np.ndarray, int, float, list, bool)
     sigPulserSettingsUpdated = QtCore.Signal(float, str, list, dict, bool)
     sigUploadedAssetsUpdated = QtCore.Signal(list)
@@ -420,17 +420,17 @@ class PulsedMasterLogic(GenericLogic):
                                                         alternating)
         return
 
-    def fast_counter_settings_changed(self, bin_width_s, record_length_s):
+    def fast_counter_settings_changed(self, bin_width_s, record_length_s, number_of_gates):
         """
 
         @param bin_width_s:
         @param record_length_s:
         @return:
         """
-        self.sigFastCounterSettingsChanged.emit(bin_width_s, record_length_s)
+        self.sigFastCounterSettingsChanged.emit(bin_width_s, record_length_s, number_of_gates)
         return
 
-    def fast_counter_settings_updated(self, bin_width_s, record_length_s):
+    def fast_counter_settings_updated(self, bin_width_s, record_length_s, number_of_gates):
         """
 
         @param bin_width_s:
@@ -438,7 +438,7 @@ class PulsedMasterLogic(GenericLogic):
         @param number_of_lasers:
         @return:
         """
-        self.sigFastCounterSettingsUpdated.emit(bin_width_s, record_length_s)
+        self.sigFastCounterSettingsUpdated.emit(bin_width_s, record_length_s, number_of_gates)
         return
 
     def ext_microwave_settings_changed(self, frequency_hz, power_dbm, use_ext_microwave):
@@ -807,7 +807,7 @@ class PulsedMasterLogic(GenericLogic):
                         fc_record_length_s = asset_params['max_laser_length']
                     else:
                         fc_record_length_s = asset_params['sequence_length']
-                    self.fast_counter_settings_changed(fc_binwidth_s, fc_record_length_s)
+                    self.fast_counter_settings_changed(fc_binwidth_s, fc_record_length_s, number_of_gates)
                     self.pulse_generator_settings_changed(asset_params['sample_rate'],
                                                           asset_params['config_name'],
                                                           asset_params['amplitude_dict'],

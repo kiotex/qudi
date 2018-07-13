@@ -58,7 +58,7 @@ class PulsedMeasurementLogic(GenericLogic):
     microwave_power = StatusVar(default=-60.0)
     microwave_freq = StatusVar(default=2870e6)
     use_ext_microwave = StatusVar(default=True)
-    current_channel_config_name = StatusVar(default='')
+    current_channel_config_name = StatusVar(default='config1')
     sample_rate = StatusVar(default=1.2e9)
     analogue_amplitude =  StatusVar(default=dict())
     interleave_on = StatusVar(default=False)
@@ -85,7 +85,7 @@ class PulsedMeasurementLogic(GenericLogic):
     sigFitUpdated = QtCore.Signal(str, np.ndarray, np.ndarray, object)
     sigMeasurementRunningUpdated = QtCore.Signal(bool, bool)
     sigPulserRunningUpdated = QtCore.Signal(bool)
-    sigFastCounterSettingsUpdated = QtCore.Signal(float, float)
+    sigFastCounterSettingsUpdated = QtCore.Signal(float, float, int)
     sigPulseSequenceSettingsUpdated = QtCore.Signal(np.ndarray, int, float, list, bool)
     sigPulseGeneratorSettingsUpdated = QtCore.Signal(float, str, dict, bool)
     sigUploadAssetComplete = QtCore.Signal(str)
@@ -109,7 +109,7 @@ class PulsedMeasurementLogic(GenericLogic):
 
         # fast counter status variables
         self.fast_counter_status = None     # 0=unconfigured, 1=idle, 2=running, 3=paused, -1=error
-        self.fast_counter_gated = False      # gated=True, ungated=False
+        self.fast_counter_gated = True      # gated=True, ungated=False
         self.fast_counter_binwidth = 1e-9   # in seconds
         self.fast_counter_record_length = 3.2e-6     # in seconds
 
@@ -122,7 +122,7 @@ class PulsedMeasurementLogic(GenericLogic):
         self.alternating = False
 
         # Pulse generator parameters
-        self.current_channel_config_name = ''
+        self.current_channel_config_name = 'config1'
         self.sample_rate = 1.2e+9
 
         self.analogue_amplitude = dict()
@@ -255,7 +255,7 @@ class PulsedMeasurementLogic(GenericLogic):
         self.sigPulserRunningUpdated.emit(False)
         self.sigExtMicrowaveRunningUpdated.emit(False)
         self.sigFastCounterSettingsUpdated.emit(self.fast_counter_binwidth,
-                                                self.fast_counter_record_length)
+                                                self.fast_counter_record_length, self.number_of_lasers)
         self.sigPulseSequenceSettingsUpdated.emit(self.controlled_vals,
                                                   self.number_of_lasers, self.sequence_length_s,
                                                   self.laser_ignore_list, self.alternating)
@@ -299,9 +299,7 @@ class PulsedMeasurementLogic(GenericLogic):
         else:
             number_of_gates = 0
 
-        cycles = self.number_of_lasers
-
-        actual_binwidth_s, actual_recordlength_s, actual_numofgates = self._fast_counter_device.configure(self.fast_counter_binwidth , self.fast_counter_record_length, number_of_gates, sweep_reset=True, preset=1, cycles = cycles)
+        actual_binwidth_s, actual_recordlength_s, actual_numofgates = self._fast_counter_device.configure(self.fast_counter_binwidth , self.fast_counter_record_length, number_of_gates)
         # use the actual parameters returned by the hardware
         self.fast_counter_binwidth = actual_binwidth_s
         self.fast_counter_record_length = actual_recordlength_s
@@ -309,7 +307,7 @@ class PulsedMeasurementLogic(GenericLogic):
         self.fast_counter_status = self._fast_counter_device.get_status()
         return actual_binwidth_s, actual_recordlength_s, actual_numofgates
 
-    def set_fast_counter_settings(self, bin_width_s, record_length_s):
+    def set_fast_counter_settings(self, bin_width_s, record_length_s, number_of_gates):
         """
 
         @param bin_width_s:
@@ -331,8 +329,8 @@ class PulsedMeasurementLogic(GenericLogic):
 
         # emit update signal for master (GUI or other logic module)
         self.sigFastCounterSettingsUpdated.emit(self.fast_counter_binwidth,
-                                                self.fast_counter_record_length)
-        return self.fast_counter_binwidth, self.fast_counter_record_length
+                                                self.fast_counter_record_length, number_of_gates)
+        return self.fast_counter_binwidth, self.fast_counter_record_length, number_of_gates
 
     def set_pulse_sequence_properties(self, controlled_vals, number_of_lasers,
                                       sequence_length_s, laser_ignore_list, is_alternating):
@@ -367,7 +365,7 @@ class PulsedMeasurementLogic(GenericLogic):
         self.alternating = is_alternating
         if self.fast_counter_gated:
             self.set_fast_counter_settings(self.fast_counter_binwidth,
-                                           self.fast_counter_record_length)
+                                           self.fast_counter_record_length, number_of_lasers)
         # emit update signal for master (GUI or other logic module)
         self.sigPulseSequenceSettingsUpdated.emit(self.controlled_vals,
                                                   self.number_of_lasers, self.sequence_length_s,
@@ -445,7 +443,7 @@ class PulsedMeasurementLogic(GenericLogic):
 
     def pulse_generator_on(self):
         """Switching on the pulse generator. """
-        self._pulse_generator_device.set_active_channels({'a_ch1': True})
+        self._pulse_generator_device.set_active_channels({'a_ch1': True, 'a_ch2': True})
         time.sleep(0.5)
         err = self._pulse_generator_device.pulser_on()
         self.sigPulserRunningUpdated.emit(True)
@@ -454,7 +452,7 @@ class PulsedMeasurementLogic(GenericLogic):
     def pulse_generator_off(self):
         """Switching off the pulse generator. """
         err = self._pulse_generator_device.pulser_off()
-        self._pulse_generator_device.set_active_channels({'a_ch1': False}) # to swich on the laser
+        self._pulse_generator_device.set_active_channels({'a_ch1': False, 'a_ch2': False}) # to swich on the laser
         self.sigPulserRunningUpdated.emit(False)
         return err
 
@@ -762,10 +760,10 @@ class PulsedMeasurementLogic(GenericLogic):
                 if fc_data.dtype != np.int64:
                     fc_data = fc_data.astype('int64')
 
-                # get elapsed sweeps
-                runtime, cycles = self._fast_counter_device.GetStatus()
-                sweeps = cycles / self._fast_counter_device.get_data_trace().shape[0]
-                self.elapsed_sweeps = self.previous_sweeps + sweeps
+                # # get elapsed sweeps
+                # runtime, cycles = self._fast_counter_device.GetStatus()
+                # sweeps = cycles / self._fast_counter_device.get_data_trace().shape[0]
+                # self.elapsed_sweeps = self.previous_sweeps + sweeps
 
                 # add old raw data from previous measurements if necessary
                 if self.recalled_raw_data is not None:

@@ -198,6 +198,10 @@ class NVdepthGui(GUIBase):
             self.counts2[i] = np.asarray(a[i].split(), dtype=np.float32)[2]
             self.error2[i] = np.asarray(a[i].split(), dtype=np.float32)[4]
 
+        self.time = self.time[np.where(self.time <= 268*1e-9)]
+        self.counts1 = self.counts1[np.where(self.time <= 268*1e-9)]
+        self.counts2 = self.counts2[np.where(self.time <= 268*1e-9)]
+
         self.data_image1 = pg.PlotDataItem(self.time*1e+9,
                                      self.counts1,
                                      pen=pg.mkPen(palette.c1, style=QtCore.Qt.DotLine),

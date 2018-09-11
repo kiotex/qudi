@@ -466,25 +466,7 @@ class SamplesWriteMethods:
 
             # write main part:
             # in this order: 'waveform_name', repeat, wait, Goto, ejump
-<<<<<<< HEAD:logic/samples_write_methods.py
-            for seq_param_dict in sequence_param:
-                repeat = seq_param_dict['repetitions']
-                trigger_wait = seq_param_dict['trigger_wait']
-                go_to = seq_param_dict['go_to']
-                event_jump_to = seq_param_dict['event_jump_to']
 
-                # for one channel:
-                if len(seq_param_dict['name']) == 1:
-                    seq_file.write('"{0}", {1:d}, {2:d}, {3:d}, {4:d}\r\n'
-                                   ''.format(seq_param_dict['name'][0], repeat, trigger_wait, go_to,
-                                             event_jump_to).encode('UTF-8'))
-                # for two channel:
-                else:
-                    seq_file.write('"{0}", "{1}", {2:d}, {3:d}, {4:d}, {5:d}\r\n'
-                                   ''.format(seq_param_dict['name'][0], seq_param_dict['name'][1],
-                                             repeat, trigger_wait, go_to,
-                                             event_jump_to).encode('UTF-8'))
-=======
             for step_num, (ensemble_obj, seq_param) in enumerate(sequence_obj.ensemble_list):
                 repeat = seq_param['repetitions'] + 1
                 event_jump_to = seq_param['event_jump_to']
@@ -509,7 +491,6 @@ class SamplesWriteMethods:
                 line_str += '{0:d}, {1:d}, {2:d}, {3:d}\r\n'.format(repeat, trigger_wait, go_to,
                                                                     event_jump_to)
                 seq_file.write(line_str.encode('UTF-8'))
->>>>>>> pulsed_param_passing_cleanup:tools/samples_write_methods.py
 
             # write the footer:
             footer = ''

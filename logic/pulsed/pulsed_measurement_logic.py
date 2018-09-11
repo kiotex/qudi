@@ -63,7 +63,7 @@ class PulsedMeasurementLogic(GenericLogic):
     __use_ext_microwave = StatusVar(default=False)
 
     # fast counter settings
-    __fast_counter_record_length = StatusVar(default=3.0e-6)
+    __fast_counter_record_length = StatusVar(default=4.0e-6)
     __fast_counter_binwidth = StatusVar(default=1.0e-9)
     __fast_counter_gates = StatusVar(default=0)
 
@@ -269,7 +269,8 @@ class PulsedMeasurementLogic(GenericLogic):
                 self.__fast_counter_record_length = float(settings_dict['record_length'])
             if 'number_of_gates' in settings_dict:
                 if self.fastcounter().is_gated():
-                    self.__fast_counter_gates = int(settings_dict['number_of_gates'])
+                    print(settings_dict)
+                    self.__fast_counter_gates = int(self._number_of_lasers)
                 else:
                     self.__fast_counter_gates = 0
 
@@ -459,17 +460,17 @@ class PulsedMeasurementLogic(GenericLogic):
     def pulse_generator_on(self):
         """Switching on the pulse generator. """
         err = self.pulsegenerator().pulser_on()
-        if err < 0:
+        if err[0] < 0:
             self.log.error('Failed to turn on pulse generator output.')
             self.sigPulserRunningUpdated.emit(False)
         else:
             self.sigPulserRunningUpdated.emit(True)
-        return err
+        return err[0]
 
     def pulse_generator_off(self):
         """Switching off the pulse generator. """
         err = self.pulsegenerator().pulser_off()
-        if err < 0:
+        if err[0] < 0:
             self.log.error('Failed to turn off pulse generator output.')
             self.sigPulserRunningUpdated.emit(True)
         else:
@@ -965,6 +966,7 @@ class PulsedMeasurementLogic(GenericLogic):
     def _apply_invoked_settings(self):
         """
         """
+
         if not isinstance(self._measurement_information, dict) or not self._measurement_information:
             self.log.warning('Can\'t invoke measurement settings from sequence information '
                              'since no measurement_information container is given.')
@@ -1036,10 +1038,9 @@ class PulsedMeasurementLogic(GenericLogic):
             self.log.error('Number of laser pulses to analyze ({0:d}) does not match the number of '
                            'controlled_variable ticks ({1:d}).'
                            ''.format(number_of_analyzed_lasers, len(self._controlled_variable)))
-
-        if self.fastcounter().is_gated() and self._number_of_lasers != self.__fast_counter_gates:
-            self.log.error('Gated fast counter gate number differs from number of laser pulses '
-                           'configured in measurement settings.')
+        # if self.fastcounter().is_gated() and self._number_of_lasers != self.__fast_counter_gates:
+        #     self.log.error('Gated fast counter gate number differs from number of laser pulses '
+        #                    'configured in measurement settings.')
         return
 
     def _pulsed_analysis_loop(self):

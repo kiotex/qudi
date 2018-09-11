@@ -74,9 +74,9 @@ class SequenceGeneratorLogic(GenericLogic):
     # generation for predefined methods.
     _generation_parameters = StatusVar(default=OrderedDict([('laser_channel', 'd_ch1'),
                                                             ('sync_channel', ''),
-                                                            ('gate_channel', ''),
+                                                            ('gate_channel', 'd_ch2'),
                                                             ('microwave_channel', 'a_ch1'),
-                                                            ('microwave_frequency', 2.87e9),
+                                                            ('microwave_frequency', 0.1e9),
                                                             ('microwave_amplitude', 0.0),
                                                             ('rabi_period', 100e-9),
                                                             ('laser_length', 3e-6),
@@ -121,9 +121,9 @@ class SequenceGeneratorLogic(GenericLogic):
 
         # current pulse generator settings that are frequently used by this logic.
         # Save them here since reading them from device every time they are used may take some time.
-        self.__activation_config = ('', set())  # Activation config name and set of active channels
-        self.__sample_rate = 0.0  # Sample rate in samples/s
-        self.__analog_levels = (dict(), dict())  # Tuple of two dict (<pp_amplitude>, <offset>)
+        self.__activation_config = ('All', set({'a_ch1', 'd_ch1', 'd_ch2', 'a_ch2', 'd_ch3', 'd_ch4'}))  # Activation config name and set of active channels
+        self.__sample_rate = 1.2e9  # Sample rate in samples/s
+        self.__analog_levels = 'amplitude_dict', OrderedDict({'a_ch1': 0.5, 'a_ch2': 0.5, 'a_ch3': 0.5, 'a_ch4': 0.5})  # Tuple of two dict (<pp_amplitude>, <offset>)
                                                  # Dict keys are analog channel descriptors
         self.__digital_levels = (dict(), dict())  # Tuple of two dict (<low_volt>, <high_volt>)
                                                   # Dict keys are digital channel descriptors
@@ -168,71 +168,14 @@ class SequenceGeneratorLogic(GenericLogic):
 
         # Get instance of PulseObjectGenerator which takes care of collecting all predefined methods
         self._pog = PulseObjectGenerator(sequencegeneratorlogic=self)
-
         self.__sequence_generation_in_progress = False
+
         return
 
     def on_deactivate(self):
         """ Deinitialisation performed during deactivation of the module.
         """
         return
-
-    # @_saved_pulse_blocks.constructor
-    # def _restore_saved_blocks(self, block_list):
-    #     return_block_dict = OrderedDict()
-    #     if block_list is not None:
-    #         for block_dict in block_list:
-    #             return_block_dict[block_dict['name']] = PulseBlock.block_from_dict(block_dict)
-    #     return return_block_dict
-    #
-    #
-    # @_saved_pulse_blocks.representer
-    # def _convert_saved_blocks(self, block_dict):
-    #     if block_dict is None:
-    #         return None
-    #     else:
-    #         block_list = list()
-    #         for block in block_dict.values():
-    #             block_list.append(block.get_dict_representation())
-    #         return block_list
-    #
-    # @_saved_pulse_block_ensembles.constructor
-    # def _restore_saved_ensembles(self, ensemble_list):
-    #     return_ensemble_dict = OrderedDict()
-    #     if ensemble_list is not None:
-    #         for ensemble_dict in ensemble_list:
-    #             return_ensemble_dict[ensemble_dict['name']] = PulseBlockEnsemble.ensemble_from_dict(
-    #                 ensemble_dict)
-    #     return return_ensemble_dict
-    #
-    # @_saved_pulse_block_ensembles.representer
-    # def _convert_saved_ensembles(self, ensemble_dict):
-    #     if ensemble_dict is None:
-    #         return None
-    #     else:
-    #         ensemble_list = list()
-    #         for ensemble in ensemble_dict.values():
-    #             ensemble_list.append(ensemble.get_dict_representation())
-    #         return ensemble_list
-    #
-    # @_saved_pulse_sequences.constructor
-    # def _restore_saved_sequences(self, sequence_list):
-    #     return_sequence_dict = OrderedDict()
-    #     if sequence_list is not None:
-    #         for sequence_dict in sequence_list:
-    #             return_sequence_dict[sequence_dict['name']] = PulseBlockEnsemble.ensemble_from_dict(
-    #                 sequence_dict)
-    #     return return_sequence_dict
-    #
-    # @_saved_pulse_sequences.representer
-    # def _convert_saved_sequences(self, sequence_dict):
-    #     if sequence_dict is None:
-    #         return None
-    #     else:
-    #         sequence_list = list()
-    #         for sequence in sequence_dict.values():
-    #             sequence_list.append(sequence.get_dict_representation())
-    #         return sequence_list
 
     ############################################################################
     # Pulse generator control methods and properties
@@ -430,6 +373,7 @@ class SequenceGeneratorLogic(GenericLogic):
 
         @param str|PulseBlockEnsemble ensemble:
         """
+
         # If str has been passed, get the ensemble object from saved ensembles
         if isinstance(ensemble, str):
             ensemble = self.saved_pulse_block_ensembles[ensemble]
@@ -446,6 +390,7 @@ class SequenceGeneratorLogic(GenericLogic):
         if ensemble.sampling_information:
             # Check if the corresponding waveforms are present in the pulse generator memory
             ready_waveforms = self.sampled_waveforms
+
             for waveform in ensemble.sampling_information['waveforms']:
                 if waveform not in ready_waveforms:
                     self.log.error('Waveform "{0}" associated with PulseBlockEnsemble "{1}" not '
@@ -515,15 +460,7 @@ class SequenceGeneratorLogic(GenericLogic):
         else:
             # Set first valid config if read config is not valid.
             config_to_set = list(avail_configs.items())[0]
-            set_config = self._apply_activation_config(config_to_set[1])
-            if set_config != config_to_set[1]:
-                self.__activation_config = ('', set_config)
-                self.log.error('Error during activation.\n'
-                               'Unable to set activation_config that was taken from pulse '
-                               'generator constraints.\n'
-                               'Probably one or more activation_configs in constraints invalid.')
-            else:
-                self.__activation_config = config_to_set
+            self.__activation_config = config_to_set
 
         # Read sample rate from device
         self.__sample_rate = float(self.pulsegenerator().get_sample_rate())
@@ -766,6 +703,7 @@ class SequenceGeneratorLogic(GenericLogic):
         @param name:
         @return:
         """
+
         if name not in self._saved_pulse_block_ensembles:
             self.log.warning('PulseBlockEnsemble "{0}" could not be found in saved pulse block '
                              'ensembles.\nReturning None.'.format(name))
@@ -863,15 +801,14 @@ class SequenceGeneratorLogic(GenericLogic):
 
     def save_sequence(self, sequence):
         """ Saves a PulseSequence instance
-
         @param object sequence: a PulseSequence object, which is going to be
                                 serialized to file.
-
         @return: str: name of the serialized object, if needed.
         """
         self._saved_pulse_sequences[sequence.name] = sequence
         self._save_sequence_to_file(sequence)
         self.sigSequenceDictUpdated.emit(self.saved_pulse_sequences)
+
         return
 
     def get_sequence(self, name):
@@ -903,7 +840,7 @@ class SequenceGeneratorLogic(GenericLogic):
             del self._saved_pulse_sequences[name]
 
         # Delete from disk
-        filepath = os.path.join(self._assets_storage_dir, '{0}.sequence'.format(name))
+        filepath = os.path.join(self._assets_storage_dir, '{0}.seq'.format(name))
         if os.path.exists(filepath):
             os.remove(filepath)
 
@@ -918,7 +855,7 @@ class SequenceGeneratorLogic(GenericLogic):
         @return PulseSequence: The de-serialized PulseSequence instance
         """
         sequence = None
-        filepath = os.path.join(self._assets_storage_dir, '{0}.sequence'.format(sequence_name))
+        filepath = os.path.join(self._assets_storage_dir, '{0}.seq'.format(sequence_name))
         if os.path.exists(filepath):
             try:
                 with open(filepath, 'rb') as file:
@@ -935,7 +872,7 @@ class SequenceGeneratorLogic(GenericLogic):
         # Get all files in asset directory ending on ".sequence" and extract a sorted list of
         # PulseSequence names
         with os.scandir(self._assets_storage_dir) as scan:
-            names = sorted(f.name[:-9] for f in scan if f.is_file and f.name.endswith('.sequence'))
+            names = sorted(f.name[:-9] for f in scan if f.is_file and f.name.endswith('.seq'))
 
         # Get all waveforms and sequences currently stored on pulser hardware in order to delete
         # outdated sampling_information dicts
@@ -959,24 +896,71 @@ class SequenceGeneratorLogic(GenericLogic):
 
     def _save_sequence_to_file(self, sequence):
         """
-        Saves a single PulseSequence instance to file by serialization using pickle.
+                Write a sequence to a seq-file.
 
-        @param PulseSequence sequence: The PulseSequence instance to be saved
-        """
-        filename = '{0}.sequence'.format(sequence.name)
-        try:
-            with open(os.path.join(self._assets_storage_dir, filename), 'wb') as file:
-                pickle.dump(sequence, file)
-        except:
-            self.log.error('Failed to serialize PulseSequence "{0}" to file.'.format(sequence.name))
-        return
+                @param str name: name of the sequence to be created
+                @param list sequence_param: a list of dict, which contains all the information, which
+                                            parameters are to be taken to create a sequence. The dict will
+                                            have at least the entry
+                                                {'name': [<list_of_sampled_file_names>] }
+                                            All other parameters, which can be used in the sequence are
+                                            determined in the get_constraints method in the category
+                                            'sequence_param'.
 
-    def _save_sequences_to_file(self):
-        """
-        Saves the saved_pulse_sequences dict items to files.
-        """
-        for sequence in self.saved_pulse_sequences.values():
-            self._save_sequence_to_file(sequence)
+                In order to write sequence files a completely new method with respect to
+                write_samples_to_file is needed.
+
+                for AWG5000/7000 Series the following parameter will be used (are also present in the
+                hardware constraints for the pulser):
+                    { 'name' : [<list_of_str_names>],
+                      'repetitions' : 0=infinity reps; int_num in [1:65536],
+                      'trigger_wait' : 0=False or 1=True,
+                      'go_to': 0=Nothing happens; int_num in [1:8000]
+                      'event_jump_to' : -1=to next; 0= nothing happens; int_num in [1:8000]
+                """
+        filename = sequence.name + '.seq'
+        sequence_param = sequence.ensemble_list
+        filepath = os.path.join(self._assets_storage_dir, filename)
+
+        with open(filepath, 'wb') as seq_file:
+            # write the header:
+            # determine the used channels according to how much files where created:
+            channels = 2 # len(sequence_param)
+            lines = len(sequence_param)
+            seq_file.write('MAGIC 300{0:d}\r\n'.format(channels).encode('UTF-8'))
+            seq_file.write('LINES {0:d}\r\n'.format(lines).encode('UTF-8'))
+
+            # write main part:
+            # in this order: 'waveform_name', repeat, wait, Goto, ejump
+            for i in range(len(sequence_param)):
+                seq_param_dict = sequence_param[i][1]
+                repeat = seq_param_dict['repetitions']
+                trigger_wait = seq_param_dict['trigger_wait']
+                go_to = seq_param_dict['go_to']
+                event_jump_to = seq_param_dict['event_jump_to']
+
+                # # for one channel:
+                # if len(seq_param_dict['name']) == 1:
+                #     seq_file.write('"{0}", {1:d}, {2:d}, {3:d}, {4:d}\r\n'
+                #                    ''.format(a.name, repeat, trigger_wait, go_to,
+                #                              event_jump_to).encode('UTF-8'))
+                # # for two channel:
+                # else:
+                seq_file.write('"{0}", "{1}", {2:d}, {3:d}, {4:d}, {5:d}\r\n'
+                               ''.format(sequence_param[i][0].name + '_ch1.wfm', sequence_param[i][0].name + '_ch2.wfm',
+                                         repeat, trigger_wait, go_to,
+                                         event_jump_to).encode('UTF-8'))
+
+                # write the footer:
+                table_jump = 'TABLE_JUMP' + 16 * ' 0,' + '\r\n'
+                logic_jump = 'LOGIC_JUMP -1, -1, -1, -1,\r\n'
+                jump_mode = 'JUMP_MODE TABLE\r\n'
+                jump_timing = 'JUMP_TIMING ASYNC\r\n'
+                strobe_option = 'STROBE 0\r\n'
+
+            footer = table_jump + logic_jump + jump_mode + jump_timing + strobe_option
+
+            seq_file.write(footer.encode('UTF-8'))
         return
 
     def generate_predefined_sequence(self, predefined_sequence_name, kwargs_dict):
@@ -1008,8 +992,9 @@ class SequenceGeneratorLogic(GenericLogic):
             ensemble.sampling_information = dict()
             self.save_ensemble(ensemble)
         for sequence in sequences:
-            sequence.sampling_information = dict()
+            # sequence.sampling_information = dict()
             self.save_sequence(sequence)
+
         self.sigPredefinedSequenceGenerated.emit(predefined_sequence_name)
         return
     # ---------------------------------------------------------------------------
@@ -1177,7 +1162,7 @@ class SequenceGeneratorLogic(GenericLogic):
             # Iterate over all repetitions of the current block while keeping track of the
             # current element index
             unrolled_element_index = 0
-            for rep_no in range(reps + 1):
+            for rep_no in range(reps):
                 # Iterate over the Block_Elements inside the current block
                 for element in block.element_list:
                     # save bin position if a transition from low to high or vice versa has occured
@@ -1258,7 +1243,7 @@ class SequenceGeneratorLogic(GenericLogic):
         digital_channels = set()
         analog_channels = set()
         if len(sequence.ensemble_list) > 0:
-            ensemble = self.get_ensemble(sequence.ensemble_list[0][0])
+            ensemble = self.get_ensemble(sequence.ensemble_list[0][0].name)
             if len(ensemble.block_list) > 0:
                 block = self.get_block(ensemble.block_list[0][0])
                 digital_channels = block.digital_channels
@@ -1269,7 +1254,7 @@ class SequenceGeneratorLogic(GenericLogic):
         length_bins = 0
         length_s = 0 if sequence.is_finite else np.inf
         for ensemble_name, seq_params in sequence.ensemble_list:
-            ensemble = self.get_ensemble(name=ensemble_name)
+            ensemble = self.get_ensemble(name=ensemble_name.name)
             ens_length, ens_bins, ens_lasers = self.get_ensemble_info(ensemble=ensemble)
             length_bins += ens_bins
             if sequence.is_finite:
@@ -1311,12 +1296,11 @@ class SequenceGeneratorLogic(GenericLogic):
     def _sampling_sequence_sanity_check(self, sequence):
         ensembles_missing = set()
         for ensemble_name, seq_params in sequence.ensemble_list:
-            ensemble = self._saved_pulse_block_ensembles.get(ensemble_name)
+            ensemble = self._saved_pulse_block_ensembles.get(ensemble_name.name)
             # Check if ensemble is present
             if ensemble is None:
                 ensembles_missing.add(ensemble_name)
                 continue
-
         # print error messages
         if len(ensembles_missing) > 0:
             self.log.error('Sampling of PulseSequence "{0}" failed. Not all PulseBlockEnsembles '
@@ -1444,6 +1428,7 @@ class SequenceGeneratorLogic(GenericLogic):
         # set of written waveform names on the device
         written_waveforms = set()
         # Iterate over all blocks within the PulseBlockEnsemble object
+
         for block_name, reps in ensemble.block_list:
             block = self.get_block(block_name)
             # Iterate over all repetitions of the current block
@@ -1465,7 +1450,6 @@ class SequenceGeneratorLogic(GenericLogic):
                         if pulse_function:
                             time_arr = (offset_bin + np.arange(
                                 samples_to_add, dtype='float64')) / self.__sample_rate
-
                         # Calculate respective part of the sample arrays
                         for chnl in digital_high:
                             digital_samples[chnl][array_write_index:array_write_index+samples_to_add] = digital_high[chnl]
@@ -1485,6 +1469,7 @@ class SequenceGeneratorLogic(GenericLogic):
                             offset_bin += samples_to_add
 
                         # Check if the temporary sample array is full and write to the device if so.
+
                         if array_write_index == array_length:
                             # Set first/last chunk flags
                             is_first_chunk = array_write_index == processed_samples
@@ -1495,7 +1480,8 @@ class SequenceGeneratorLogic(GenericLogic):
                                 digital_samples=digital_samples,
                                 is_first_chunk=is_first_chunk,
                                 is_last_chunk=is_last_chunk,
-                                total_number_of_samples=ensemble_info['number_of_samples'])
+                                total_number_of_samples=ensemble_info['number_of_samples'],
+                                activation_dict = self.__activation_config[1])
 
                             # Update written waveforms set
                             written_waveforms.update(wfm_list)
@@ -1510,6 +1496,7 @@ class SequenceGeneratorLogic(GenericLogic):
                                                          array_length))
                                 if not self.__sequence_generation_in_progress:
                                     self.module_state.unlock()
+
                                 self.sigAvailableWaveformsUpdated.emit(self.sampled_waveforms)
                                 self.sigSampleEnsembleComplete.emit(None)
                                 return -1, list()
@@ -1633,11 +1620,11 @@ class SequenceGeneratorLogic(GenericLogic):
                 offset_bin = 0  # Keep the offset at 0
 
             # Only sample ensembles if they have not already been sampled
-            if sequence.rotating_frame or ensemble_name not in generated_ensembles:
+            if sequence.rotating_frame or ensemble_name.name not in generated_ensembles:
                 offset_bin, waveform_list, ensemble_info = self.sample_pulse_block_ensemble(
-                    ensemble=ensemble_name,
+                    ensemble=ensemble_name.name,
                     offset_bin=offset_bin,
-                    name_tag=name_tag)
+                    name_tag=None)
 
                 if len(waveform_list) == 0:
                     self.log.error('Sampling of PulseBlockEnsemble "{0}" failed during sampling of '
@@ -1650,16 +1637,17 @@ class SequenceGeneratorLogic(GenericLogic):
 
                 # Add to generated ensembles
                 ensemble_info['waveforms'] = waveform_list
-                generated_ensembles[name_tag] = ensemble_info
+                generated_ensembles[ensemble_name.name] = ensemble_info
 
                 # Add created waveform names to the set
                 written_waveforms.update(waveform_list)
 
             # Append written sequence step to sequence_param_dict_list
             sequence_param_dict_list.append(
-                (tuple(generated_ensembles[name_tag]['waveforms']), seq_param))
+                (tuple(generated_ensembles[ensemble_name.name]['waveforms']), seq_param))
 
         # pass the whole information to the sequence creation method:
+
         steps_written = self.pulsegenerator().write_sequence(sequence.name,
                                                              sequence_param_dict_list)
         if steps_written != len(sequence_param_dict_list):

@@ -30,7 +30,6 @@ from collections import OrderedDict
 from logic.pulsed.sampling_functions import SamplingFunctions
 from core.util.modules import get_main_dir
 
-
 class PulseBlockElement(object):
     """
     Object representing a single atomic element in a pulse block.
@@ -586,7 +585,6 @@ class PulseBlockEnsemble(object):
 class PulseSequence(object):
     """
     Higher order object for sequence capability.
-
     Represents a playback procedure for a number of PulseBlockEnsembles. Unused for pulse
     generator hardware without sequencing functionality.
     """
@@ -601,7 +599,6 @@ class PulseSequence(object):
     def __init__(self, name, ensemble_list=None, rotating_frame=False):
         """
         The constructor for a PulseSequence objects needs to have:
-
         @param str name: the actual name of the sequence
         @param list ensemble_list: list containing a tuple of two entries:
                                           [(PulseBlockEnsemble name, seq_param),
@@ -635,7 +632,6 @@ class PulseSequence(object):
                                           'flag_high': The flag to set to high while this step is
                                                        playing. Select 'OFF' (default) to set all
                                                        flags to low.
-
                                           If only 'repetitions' are in the dictionary, then the dict
                                           will look like:
                                             seq_param = {'repetitions': 41}
@@ -803,7 +799,6 @@ class PulseSequence(object):
     def insert(self, position, element):
         """ Insert a (PulseSequence.name, parameters) tuple at the given position. The old element
         at this position and all consecutive elements after that will be shifted to higher indices.
-
         @param int position: position in the ensemble list
         @param tuple|str element: PulseBlock name (str)[, seq_parameters (dict)]
         """
@@ -1023,6 +1018,19 @@ class PredefinedGeneratorBase:
         """
         return self._get_trigger_element(length=length,
                                          increment=increment,
+                                         channels=[self.laser_channel, 'd_ch3'])
+
+    def _get_laser_init_element(self, length, increment):
+        """
+        Creates laser trigger PulseBlockElement
+
+        @param float length: laser pulse duration in seconds
+        @param float increment: laser pulse duration increment in seconds
+
+        @return: PulseBlockElement, two elements for laser and gate trigger (delay element)
+        """
+        return self._get_trigger_element(length=length,
+                                         increment=increment,
                                          channels=self.laser_channel)
 
     def _get_laser_gate_element(self, length, increment):
@@ -1096,7 +1104,129 @@ class PredefinedGeneratorBase:
                 phase=phase)
         return mw_element
 
-    def _get_multiple_mw_element(self, length, increment, amps=None, freqs=None, phases=None):
+    def _get_rf_element(self, length, increment, amp=None, freq=None, phase=None):
+        """
+        Creates a MW pulse PulseBlockElement
+
+        @param float length: MW pulse duration in seconds
+        @param float increment: MW pulse duration increment in seconds
+        @param float freq: MW frequency in case of analogue MW channel in Hz
+        @param float amp: MW amplitude in case of analogue MW channel in V
+        @param float phase: MW phase in case of analogue MW channel in deg
+
+        @return: PulseBlockElement, the generated MW element
+        """
+        if self.microwave_channel.startswith('d'):
+            mw_element = self._get_trigger_element(
+                length=length,
+                increment=increment,
+                channels=self.microwave_channel)
+        else:
+            mw_element = self._get_idle_element(
+                length=length,
+                increment=increment)
+            mw_element.pulse_function['a_ch2'] = SamplingFunctions.Sin(
+                amplitude=amp,
+                frequency=freq,
+                phase=phase)
+        return mw_element
+
+    def _get_mw_rf_element(self, length, increment, amp1=None, freq1=None, phase1=None,
+                           amp2=None, freq2=None, phase2=None):
+        """
+        Creates a MW pulse PulseBlockElement
+
+        @param float length: MW pulse duration in seconds
+        @param float increment: MW pulse duration increment in seconds
+        @param float freq: MW frequency in case of analogue MW channel in Hz
+        @param float amp: MW amplitude in case of analogue MW channel in V
+        @param float phase: MW phase in case of analogue MW channel in deg
+
+        @return: PulseBlockElement, the generated MW element
+        """
+        if self.microwave_channel.startswith('d'):
+            mw_element = self._get_trigger_element(
+                length=length,
+                increment=increment,
+                channels=self.microwave_channel)
+        else:
+            mw_element = self._get_idle_element(
+                length=length,
+                increment=increment)
+            mw_element.pulse_function['a_ch1'] = SamplingFunctions.Sin(
+                amplitude=amp1,
+                frequency=freq1,
+                phase=phase1)
+            mw_element.pulse_function['a_ch2'] = SamplingFunctions.Sin(
+                amplitude=amp2,
+                frequency=freq2,
+                phase=phase2)
+
+        return mw_element
+
+    def _get_mw_rf_gate_element(self, length, increment, amp1=None, freq1=None, phase1=None,
+                           amp2=None, freq2=None, phase2=None):
+        """
+        Creates a MW pulse PulseBlockElement
+
+        @param float length: MW pulse duration in seconds
+        @param float increment: MW pulse duration increment in seconds
+        @param float freq: MW frequency in case of analogue MW channel in Hz
+        @param float amp: MW amplitude in case of analogue MW channel in V
+        @param float phase: MW phase in case of analogue MW channel in deg
+
+        @return: PulseBlockElement, the generated MW element
+        """
+        if self.microwave_channel.startswith('d'):
+            mw_element = self._get_trigger_element(
+                length=length,
+                increment=increment,
+                channels=self.microwave_channel)
+        else:
+            mw_element = self._get_idle_element(
+                length=length,
+                increment=increment)
+            mw_element.pulse_function['a_ch1'] = SamplingFunctions.Sin(
+                amplitude=amp1,
+                frequency=freq1,
+                phase=phase1)
+            mw_element.pulse_function['a_ch2'] = SamplingFunctions.Sin(
+                amplitude=amp2,
+                frequency=freq2,
+                phase=phase2)
+            mw_element.digital_high[self.gate_channel] = True
+
+        return mw_element
+
+    def _get_mw_gate_element(self, length, increment, amp=None, freq=None, phase=None):
+        """
+        Creates a MW pulse PulseBlockElement
+
+        @param float length: MW pulse duration in seconds
+        @param float increment: MW pulse duration increment in seconds
+        @param float freq: MW frequency in case of analogue MW channel in Hz
+        @param float amp: MW amplitude in case of analogue MW channel in V
+        @param float phase: MW phase in case of analogue MW channel in deg
+
+        @return: PulseBlockElement, the generated MW element
+        """
+        if self.microwave_channel.startswith('d'):
+            mw_element = self._get_trigger_element(
+                length=length,
+                increment=increment,
+                channels=self.microwave_channel)
+        else:
+            mw_element = self._get_idle_element(
+                length=length,
+                increment=increment)
+            mw_element.pulse_function[self.microwave_channel] = SamplingFunctions.Sin(
+                amplitude=amp,
+                frequency=freq,
+                phase=phase)
+            mw_element.digital_high[self.gate_channel] = True
+        return mw_element
+
+    def _get_multiple_mw_elem(self, length, increment, amps=None, freqs=None, phases=None):
         """
         Creates single, double or triple sine mw element.
 
@@ -1191,6 +1321,36 @@ class PredefinedGeneratorBase:
                 length += blocks[block_name].increment_s * ((reps ** 2 + reps) / 2)
         return length
 
+    def _generate_waveform(self, element_list, name, controlled_variables_array, num_of_points):
+
+        # Create block and append to created_blocks list
+        pulse_block = PulseBlock(name = name)
+        created_blocks = list()
+        for element in element_list:
+            pulse_block.append(element)
+        created_blocks.append(pulse_block)
+
+        # Create block ensemble
+        block_ensemble = PulseBlockEnsemble(name=name, rotating_frame=True)
+        block_ensemble.append((pulse_block.name, 1))
+
+        # Create and append sync trigger block if needed
+        if self.sync_channel:
+            sync_block = PulseBlock(name='sync_trigger')
+            sync_block.append(self._get_sync_element())
+            created_blocks.append(sync_block)
+            block_ensemble.append((sync_block.name, 0))
+
+        # add metadata to invoke settings later on
+        block_ensemble.measurement_information['alternating'] = False
+        block_ensemble.measurement_information['laser_ignore_list'] = list()
+        block_ensemble.measurement_information['controlled_variable'] = controlled_variables_array
+        block_ensemble.measurement_information['units'] = ('s', '')
+        block_ensemble.measurement_information['number_of_lasers'] = num_of_points
+        block_ensemble.measurement_information['counting_length'] = self._get_ensemble_count_length(
+            ensemble=block_ensemble, created_blocks=created_blocks)
+
+        return created_blocks, block_ensemble
 
 class PulseObjectGenerator(PredefinedGeneratorBase):
     """

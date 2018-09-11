@@ -21,205 +21,7 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_23">
       <item row="0" column="0">
-<<<<<<< HEAD
-       <layout class="QGridLayout" name="gridLayout_25">
-        <item row="5" column="0">
-         <widget class="QLabel" name="show_errorbars_Label">
-          <property name="text">
-           <string>Error bars ?</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="1">
-         <widget class="QCheckBox" name="ana_param_errorbars_CheckBox">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="0">
-         <widget class="QLabel" name="second_plot_Label">
-          <property name="text">
-           <string>Show second plot?</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="2">
-         <widget class="QLabel" name="ana_param_record_length_Label">
-          <property name="text">
-           <string>Counter record length:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="1">
-         <widget class="QComboBox" name="second_plot_ComboBox">
-          <item>
-           <property name="text">
-            <string>None</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Processed</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>FFT</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Log(x)</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Log(y)</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Log(x)Log(y)</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Delta</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="5" column="2">
-         <widget class="QLabel" name="ana_param_num_laserpulses_Label">
-          <property name="text">
-           <string>Num Laserpulses:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="3">
-         <widget class="QSpinBox" name="ana_param_num_laser_pulse_SpinBox">
-          <property name="minimum">
-           <number>0</number>
-          </property>
-          <property name="maximum">
-           <number>10000000</number>
-          </property>
-          <property name="value">
-           <number>50</number>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="2">
-         <widget class="QLabel" name="ana_param_x_axis_inc_Label">
-          <property name="text">
-           <string>controlled variable incr:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="3">
-         <widget class="ScienDSpinBox" name="ana_param_record_length_SpinBox">
-          <property name="suffix">
-           <string>s</string>
-          </property>
-          <property name="decimals">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <double>100000000.000000000000000</double>
-          </property>
-          <property name="value">
-           <double>3000.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="3">
-         <widget class="ScienDSpinBox" name="ana_param_x_axis_inc_ScienDSpinBox">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
-          <property name="maximum">
-           <double>999999999.000000000000000</double>
-          </property>
-          <property name="value">
-           <double>1.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="3">
-         <widget class="ScienDSpinBox" name="ana_param_x_axis_start_ScienDSpinBox">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
-          <property name="maximum">
-           <double>999999999.000000000000000</double>
-          </property>
-          <property name="value">
-           <double>1.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="2">
-         <widget class="QLabel" name="ana_param_x_axis_start_Label">
-          <property name="text">
-           <string>controlled variable start:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="2">
-         <widget class="QLabel" name="label_29">
-          <property name="text">
-           <string>Invoke settings ?</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="3">
-         <widget class="QCheckBox" name="ana_param_invoke_settings_CheckBox">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="checked">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="3">
-         <widget class="QComboBox" name="ana_param_fc_bins_ComboBox"/>
-        </item>
-        <item row="0" column="1">
-         <widget class="QCheckBox" name="ana_param_ignore_first_CheckBox">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2">
-         <widget class="QLabel" name="label_22">
-          <property name="text">
-           <string>Fastcounter Binwidth (s):</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QCheckBox" name="ana_param_ignore_last_CheckBox">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QCheckBox" name="ana_param_alternating_CheckBox">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-=======
        <layout class="QGridLayout" name="gridLayout_18">
->>>>>>> pulsed_param_passing_cleanup
         <item row="0" column="0">
          <widget class="PlotWidget" name="pulse_analysis_second_PlotWidget"/>
         </item>
@@ -371,20 +173,6 @@
      </item>
     </layout>
    </item>
-<<<<<<< HEAD
-   <item row="4" column="5">
-    <widget class="QSpinBox" name="time_param_elapsed_sweep_ScienSpinBox">
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
-     <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::NoButtons</enum>
-     </property>
-     <property name="maximum">
-      <number>999999999</number>
-     </property>
-    </widget>
-=======
    <item row="1" column="0" colspan="11">
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
@@ -940,7 +728,6 @@
       </widget>
      </item>
     </layout>
->>>>>>> pulsed_param_passing_cleanup
    </item>
   </layout>
  </widget>
@@ -988,7 +775,6 @@
   <tabstop>pulse_analysis_PlotWidget</tabstop>
   <tabstop>pulse_analysis_second_PlotWidget</tabstop>
   <tabstop>time_param_elapsed_time_LineEdit</tabstop>
-  <tabstop>time_param_elapsed_sweep_ScienSpinBox</tabstop>
   <tabstop>time_param_ana_periode_DoubleSpinBox</tabstop>
  </tabstops>
  <resources/>

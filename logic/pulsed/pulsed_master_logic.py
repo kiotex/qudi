@@ -654,6 +654,7 @@ class PulsedMasterLogic(GenericLogic):
 
     @QtCore.Slot(object)
     def sample_ensemble_finished(self, ensemble):
+
         self.status_dict['sampling_ensemble_busy'] = False
         self.sigSampleEnsembleComplete.emit(ensemble)
         if self.status_dict['sampload_busy'] and not self.status_dict['sampling_sequence_busy']:

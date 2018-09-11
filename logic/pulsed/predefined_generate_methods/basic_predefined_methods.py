@@ -69,7 +69,7 @@ class BasicPredefinedGenerator(PredefinedGeneratorBase):
         created_ensembles.append(block_ensemble)
         return created_blocks, created_ensembles, created_sequences
 
-    def generate_laser_mw_on(self, name='laser_mw_on', length=3.0e-6):
+    def generate_laser_mw_on(self, name='laser_mw_on'):
         """ General generation method for laser on and microwave on generation.
 
         @param string name: Name of the PulseBlockEnsemble to be generated
@@ -82,7 +82,7 @@ class BasicPredefinedGenerator(PredefinedGeneratorBase):
         created_sequences = list()
 
         # create the laser_mw element
-        laser_mw_element = self._get_mw_laser_element(length=length,
+        laser_mw_element = self._get_mw_laser_element(length=(1.0/self.microwave_frequency)*50,
                                                       increment=0,
                                                       amp=self.microwave_amplitude,
                                                       freq=self.microwave_frequency,
@@ -93,7 +93,7 @@ class BasicPredefinedGenerator(PredefinedGeneratorBase):
         created_blocks.append(laser_mw_block)
         # Create block ensemble and append to created_ensembles list
         block_ensemble = PulseBlockEnsemble(name=name, rotating_frame=False)
-        block_ensemble.append((laser_mw_block.name, 0))
+        block_ensemble.append((laser_mw_block.name, 1))
         created_ensembles.append(block_ensemble)
         return created_blocks, created_ensembles, created_sequences
 
@@ -133,16 +133,16 @@ class BasicPredefinedGenerator(PredefinedGeneratorBase):
         tau_array = tau_start + np.arange(number_of_taus) * tau_step
 
         # create the laser_mw element
-        mw_element = self._get_mw_element(length=tau_start,
+        mw_element = self._get_mw_gate_element(length=tau_start,
                                           increment=tau_step,
                                           amp=self.microwave_amplitude,
                                           freq=self.microwave_frequency,
                                           phase=0)
         waiting_element = self._get_idle_element(length=self.wait_time,
                                                  increment=0)
-        laser_element = self._get_laser_gate_element(length=self.laser_length,
+        laser_element = self._get_laser_element(length=self.laser_length,
                                                      increment=0)
-        delay_element = self._get_delay_gate_element()
+        delay_element = self._get_delay_element()
 
         # Create block and append to created_blocks list
         rabi_block = PulseBlock(name=name)
@@ -154,7 +154,7 @@ class BasicPredefinedGenerator(PredefinedGeneratorBase):
 
         # Create block ensemble
         block_ensemble = PulseBlockEnsemble(name=name, rotating_frame=False)
-        block_ensemble.append((rabi_block.name, number_of_taus - 1))
+        block_ensemble.append((rabi_block.name, number_of_taus))
 
         # Create and append sync trigger block if needed
         if self.sync_channel:

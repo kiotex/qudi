@@ -12,6 +12,17 @@ Changes/New features:
 * POI manager keeps POIs as StatusVar across restarts and fixes to distance measurement
 * Various stability improvements and minor bug fixes
 * Update conda environment to more recent versions of packages
+* Fix installation procedure for the conda environment in windows by using powershell in the cmd and catch with that potential exceptions (e.g. if conda environment is not present).
+* Added .ico image to make a desktop shortcut on Windows with explanation in the documentation
+* Added a how-to-participate guide to the documentation
+* Added installation options guide to the documentation
+* A lot of smaller fixes to the spectrometer (WinSpec) -> this also modifies the connectors in the default config
+* Added fitting to the spectrometer
+* Bug fixes and support for SMD12 laser controller
+* New hardware file for Microwave source - Anritsu MG3691C has been added.
+* Add separate conda environments for windows 7 32bit, windows 7 64bit, and windows 10 64bit. 
+* Extend the windows installation procedure of the conda environment for qudi. The conda environments is selected automatically for the correct windows version and the appropriate environment file is taken.
+* Rewrite the documentation for required python packages for Qudi and mention instead the installation procedure, how to create manually a python environment for qudi.
 * **Pulsed 3.0:**\
     _A truckload of changes regarding all pulsed measurement related modules_
     * Bug fix for waveform generation larger than ~2 GSamples
@@ -83,11 +94,13 @@ Changes/New features:
     * Pulsed object instances (blocks, ensembles, sequences) are serialized to a directory that can 
     be changed via ConfigOption. Each instance is a separate file so it is easier to manage a large 
     number of instances. In the future these instances need to be saved as StatusVars
+    * New dialog box for pulse generator hardware settings. Previously the settings were located 
+    directly in a tab of the PulsedMainGUI. Also added voltage settings for digital and analog 
+    channels that were missing in the GUI before. 
     * Lots of smaller changes to improve programming flexibility and robustness against users
     
 
 Config changes:
-
 * **All** pulsed related logic module paths need to be changed because they have been moved in the logic
 subfolder "pulsed". As an example instead of
     ```
@@ -147,6 +160,17 @@ look somewhat like:
     Essentially "additional_extraction_path" and "additional_analysis_path" only need to be 
     specified when you want to import sampling functions or predefined methods from an additional 
     directory other than the default directories situated in qudi.logic.pulsed.
+* The fitting has been added to the spectrometer logic module. You need to connect the FitLogic to 
+the SpectrometerLogic module like:
+    ```
+    spectrumlogic: 
+    module.Class: 'spectrum.SpectrumLogic' 
+    connect: 
+        spectrometer: 'myspectrometer' 
+        savelogic: 'savelogic' 
+        odmrlogic: 'odmrlogic' 
+        fitlogic: 'fitlogic'
+    ```
 
 ## Release 0.9
 Released on 6 Mar 2018
@@ -184,6 +208,7 @@ Changes/New features:
 * Analog signal input (for PDMR measurements) now supported for slow counter/confocal/ODMR (see config changes)
 * Use of rpyc became optional (does not need to be installed if no remote module capability is needed)
 * Mayor cleanup/overhaul of the `microwave_interface.py` and adaption of all affected modules (hardware/logic)
+
 
 
 Config changes:

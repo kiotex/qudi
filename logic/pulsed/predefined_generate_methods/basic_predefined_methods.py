@@ -121,7 +121,8 @@ class BasicPredefinedGenerator(PredefinedGeneratorBase):
         created_ensembles.append(block_ensemble)
         return created_blocks, created_ensembles, created_sequences
 
-    def generate_rabi(self, name='rabi', tau_start=10.0e-9, tau_step=10.0e-9, number_of_taus=50):
+    def generate_rabi(self, name='rabi', microwave_amplitude = 0.25, tau_start=10.0e-9, tau_step=10.0e-9,
+                      number_of_taus=50):
         """
 
         """
@@ -135,7 +136,7 @@ class BasicPredefinedGenerator(PredefinedGeneratorBase):
         # create the laser_mw element
         mw_element = self._get_mw_gate_element(length=tau_start,
                                           increment=tau_step,
-                                          amp=self.microwave_amplitude,
+                                          amp=microwave_amplitude,
                                           freq=self.microwave_frequency,
                                           phase=0)
         waiting_element = self._get_idle_element(length=self.wait_time,

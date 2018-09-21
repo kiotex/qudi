@@ -22,13 +22,10 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 
 from qtpy import QtCore
 import importlib
-from core.module import StatusVar
+
 from core.util.models import ListTableModel
 from logic.generic_logic import GenericLogic
 import logic.generic_task as gt
-
-import schedule
-import time
 
 class TaskListTableModel(ListTableModel):
     """ An extension of the ListTableModel for keeping a task list in a TaskRunner.
@@ -41,10 +38,8 @@ class TaskListTableModel(ListTableModel):
     def data(self, index, role):
         """ Get data from model for a given cell. Data can have a role that
         affects display.
-
         @param QModelIndex index: cell for which data is requested
         @param ItemDataRole role: role for which data is requested
-
         @return QVariant: data for given cell and role
         """
         if not index.isValid():
@@ -69,7 +64,6 @@ class TaskListTableModel(ListTableModel):
 
     def append(self, data):
         """ Add a task to the end of the storage list and listen to its signals.
-
         @param object data: PrePostTask or InterruptableTask to add to list.
         """
         with self.lock:
@@ -95,8 +89,6 @@ class TaskRunner(GenericLogic):
 
     sigLoadTasks = QtCore.Signal()
     sigCheckTasks = QtCore.Signal()
-
-    refocus_time = StatusVar('refocus_time', 2)
 
     def on_activate(self):
         """ Initialise task runner.
@@ -182,11 +174,8 @@ class TaskRunner(GenericLogic):
 
     def registerTask(self, task):
         """ Add a task from an external source (i.e. not loaded by task runner) to task runner.
-
         @param dict task: dictionary describing a task to register
-
         @return bool: whether registering tasks succeeded
-
         task: dict
             bool ok: loading checks passed
             obj object: refernece to task object
@@ -268,19 +257,13 @@ class TaskRunner(GenericLogic):
 
     def startTaskByIndex(self, index):
         """ Try starting a task identified by its list index.
-
         @param int index: index of task in task list
         """
         task = self.model.storage[index.row()]
         self.startTask(task)
-        # schedule.every(self.refocus_time).minutes.do(lambda: self.startTask(task))
-        # while True:
-        #      schedule.run_pending()
-        #      time.sleep(1)
 
     def startTaskByName(self, taskname):
         """ Try starting a task identified by its configured name.
-
         @param str name: name assigned to task
         """
         task = self.getTaskByName(taskname)
@@ -288,10 +271,9 @@ class TaskRunner(GenericLogic):
 
     def startTask(self, task):
         """ Try starting a task identified by its task dictionary
-
         @param dict task: dictionary that contains all information about task
         """
-                # print('runner', QtCore.QThread.currentThreadId())
+        # print('runner', QtCore.QThread.currentThreadId())
         if not task['ok']:
             self.log.error('Task {} did not pass all checks for required '
                     'tasks and modules and cannot be run'.format(
@@ -310,7 +292,6 @@ class TaskRunner(GenericLogic):
 
     def pauseTaskByIndex(self, index):
         """ Try pausing a task identified by its list index.
-
         @param int index: index of task in task list
         """
         task = self.model.storage[index.row()]
@@ -318,7 +299,6 @@ class TaskRunner(GenericLogic):
 
     def pauseTaskByName(self, taskname):
         """ Try pausing a task identified by its configured name.
-
         @param str name: name assigned to task
         """
         task = self.getTaskByName(taskname)
@@ -326,7 +306,6 @@ class TaskRunner(GenericLogic):
 
     def pauseTask(self, task):
         """ Actually Pause the Task.
-
         @param obj task: Reference to the task object
         """
         # print('runner', QtCore.QThread.currentThreadId())
@@ -337,7 +316,6 @@ class TaskRunner(GenericLogic):
 
     def stopTaskByIndex(self, index):
         """ Try stopping a task identified by its list index.
-
         @param int index: index of task in task list
         """
         task = self.model.storage[index.row()]
@@ -345,7 +323,6 @@ class TaskRunner(GenericLogic):
 
     def stopTaskByName(self, taskname):
         """ Try stopping a task identified by its configured name.
-
         @param str name: name assigned to task
         """
         task = self.getTaskByName(taskname)
@@ -360,9 +337,7 @@ class TaskRunner(GenericLogic):
 
     def getTaskByName(self, taskname):
         """ Get task dictionary for a given task name.
-
         @param str name: name of the task
-
         @return dict: task dictionary
         """
         for task in self.model.storage:
@@ -373,7 +348,6 @@ class TaskRunner(GenericLogic):
     def getTaskByReference(self, ref):
         """ Get task dictionary by the identity of its task object.
         @param str ref: task object
-
         @return dict: task dictionary
         """
         for task in self.model.storage:
@@ -383,10 +357,8 @@ class TaskRunner(GenericLogic):
 
     def getModule(self, taskname, modname):
         """ Get a reference to a module that is in a task's requied module list.
-
         @param str taskname: name of task
         @param str modname: name of module
-
         @return object: module
         """
         task = self.getTaskByName(taskname)
@@ -397,18 +369,14 @@ class TaskRunner(GenericLogic):
 
     def resumePauseTasks(self, ref):
         """ Try resuming all tasks paused by the given task.
-
         @param task ref: task object for which tasks should be resumed
-
         @return bool: Whether resuming was sucessful
         """
         return self._resumePauseTasks(self.getTaskByReference(ref))
 
     def _resumePauseTasks(self, task):
         """ Try resuming all tasks paused by the given task.
-
         @param dict task: dict for task that should be resumed
-
         @return bool: whether resuming was successful
         """
         for ptask in task['pausetasks']:
@@ -433,18 +401,14 @@ class TaskRunner(GenericLogic):
 
     def postRunPPTasks(self, ref):
         """ Try executing post action for preposttasks associated with a given task.
-
         @param task ref: task object
-
         @return bool: whether post actions were successful
         """
         return self._postRunPPTasks(self.getTaskByReference(ref))
 
     def _postRunPPTasks(self, task):
         """ Try executing post action for preposttasks associated with a given task.
-
         @param dict task: task dictionary
-
         @return bool: whether post actions were successful
         """
         for pptask in task['preposttasks']:
@@ -467,18 +431,14 @@ class TaskRunner(GenericLogic):
 
     def preRunPPTasks(self, ref):
         """ Try running pre action of preposttask associated with given task.
-
         @param task ref: task object
-
         @return bool: whether pre tasks were successful
         """
         return self._preRunPPTasks(self.getTaskByReference(ref))
 
     def _preRunPPTasks(self, task):
         """ Try running pre action of preposttask associated with given task.
-
         @param dict task: task dictionary
-
         @return bool: whether pre tasks were successful
         """
         for pptask in task['preposttasks']:
@@ -502,18 +462,14 @@ class TaskRunner(GenericLogic):
 
     def pausePauseTasks(self, ref):
         """ Try pausing tasks required for starting a given task.
-
         @param task ref: task object
-
         @return bool: whether pausing tasks was successful
         """
         return self._pausePauseTasks(self.getTaskByReference(ref))
 
     def _pausePauseTasks(self, task):
         """ Try pausing tasks required for starting a given task.
-
         @param dict task: task dictionary
-
         @return bool: whether pausing tasks was successful
         """
         for ptask in task['pausetasks']:
@@ -535,4 +491,3 @@ class TaskRunner(GenericLogic):
                         'preparing: {}'.format(ptask, task['name']))
                 return False
         return True
-

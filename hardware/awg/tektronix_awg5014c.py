@@ -362,21 +362,24 @@ class AWG5014C(Base, PulserInterface):
                              respective asset loaded into the channel,
                              string describing the asset type ('waveform' or 'sequence')
         """
-        # Get all active channels
-        chnl_activation = self.get_active_channels()
-        channel_numbers = sorted(int(chnl.split('_ch')[1]) for chnl in chnl_activation if
-                                 chnl.startswith('a') and chnl_activation[chnl])
 
         # Get assets per channel
         loaded_assets = dict()
         current_type = None
-        for chnl_num in channel_numbers:
 
-            asset_name = self.query('SOUR1:FUNC:USER?')
-            try:
-                loaded_assets.update({chnl_num: asset_name.split('\\waves/')[1].split('_ch2.wfm')[0]})
-            except IndexError:
-                loaded_assets.update({chnl_num: ''})
+        asset_name = self.query('SOUR1:FUNC:USER?')
+
+        if len(asset_name.rsplit(',', 1)[0])==0:
+            asset_name = self.query('SOUR2:FUNC:USER?')
+
+        a = asset_name.rsplit(',', 1)
+        name, type = a[0].rsplit('.', 1)
+        if type[0:3]=='seq':
+            current_type = 'sequence'
+            loaded_assets.update({1: name.rsplit('/', 1)[1]})
+        elif type[0:3]=='wfm':
+            current_type = 'waveform'
+            loaded_assets.update({1: name.rsplit('/', 1)[1][:-4]})
 
         return loaded_assets, current_type
 
@@ -973,16 +976,16 @@ class AWG5014C(Base, PulserInterface):
             if mrk_ch_1 in digital_samples and mrk_ch_2 in digital_samples:
                 mrk_bytes = digital_samples[mrk_ch_2].view('uint8')
                 tmp_bytes = digital_samples[mrk_ch_1].view('uint8')
-                np.left_shift(mrk_bytes, 7, out=mrk_bytes)
-                np.left_shift(tmp_bytes, 6, out=tmp_bytes)
+                np.left_shift(mrk_bytes, 1, out=mrk_bytes)
                 np.add(mrk_bytes, tmp_bytes, out=mrk_bytes)
+            elif mrk_ch_1 in digital_samples:
+                mrk_bytes = digital_samples[mrk_ch_1].view('uint8')
             else:
                 mrk_bytes = None
             # print('Prepare digital channel data: {0}'.format(time.time() - start))
 
             # Create waveform name string
             wfm_name = '{0}_ch{1:d}'.format(name, a_ch_num)
-
             # Write WFM file for waveform
             start = time.time()
             self._write_wfm(filename=wfm_name,

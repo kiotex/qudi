@@ -62,6 +62,7 @@ class DetectionGenerator(PredefinedGeneratorBase):
         waiting_element = self._get_idle_element(length=self.wait_time, increment=0)
         laser_element = self._get_laser_element(length=self.laser_length, increment=0)
         delay_element = self._get_delay_element()
+        print(self.rabi_period)
 
         pihalf_element = self._get_mw_rf_element(length = self.rabi_period / 4,
                                                  increment = 0,
@@ -194,7 +195,6 @@ class DetectionGenerator(PredefinedGeneratorBase):
             i = i + 1
 
         #---------------------------------------------------------------------------------------------------------------
-
         created_sequence = PulseSequence(name=name, ensemble_list=sequence_list, rotating_frame=True)
 
         created_sequence.measurement_information['alternating'] = True

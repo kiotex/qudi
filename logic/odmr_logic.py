@@ -503,7 +503,7 @@ class ODMRLogic(GenericLogic):
                 self.module_state.unlock()
                 return -1
 
-            if self._pulse_generator_device.get_loaded_asset() == 'Laser_MW_On':
+            if self._pulse_generator_device.get_loaded_assets()[0][1]=='laser_mw_on':
                 self._pulse_generator_device.set_active_channels({'a_ch1': True})
                 time.sleep(0.5)
                 self._pulse_generator_device.pulser_on()
@@ -511,6 +511,7 @@ class ODMRLogic(GenericLogic):
                 self.log.error('load Laser_MW_On sequence on AWG')
                 self._stop_odmr_counter()
                 self._pulse_generator_device.pulser_off()
+                self._pulse_generator_device.set_active_channels({'a_ch1': False})
                 self.mw_off()
                 self.unlock()
                 return -1
@@ -924,7 +925,7 @@ class ODMRLogic(GenericLogic):
         self.set_runtime(runtime)
 
         # start the scan
-        if self._pulse_generator_device.get_loaded_asset()=='Laser_MW_On':
+        if self._pulse_generator_device.get_loaded_assets()[0][1]=='laser_mw_on':
             self._pulse_generator_device.pulser_on()
             self.start_odmr_scan()
 

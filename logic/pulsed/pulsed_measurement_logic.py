@@ -269,7 +269,6 @@ class PulsedMeasurementLogic(GenericLogic):
                 self.__fast_counter_record_length = float(settings_dict['record_length'])
             if 'number_of_gates' in settings_dict:
                 if self.fastcounter().is_gated():
-                    print(settings_dict)
                     self.__fast_counter_gates = int(self._number_of_lasers)
                 else:
                     self.__fast_counter_gates = 0
@@ -470,6 +469,7 @@ class PulsedMeasurementLogic(GenericLogic):
     def pulse_generator_off(self):
         """Switching off the pulse generator. """
         err = self.pulsegenerator().pulser_off()
+        self.pulsegenerator().set_active_channels({'a_ch1': False, 'a_ch2': False})
         if err[0] < 0:
             self.log.error('Failed to turn off pulse generator output.')
             self.sigPulserRunningUpdated.emit(True)
@@ -712,6 +712,7 @@ class PulsedMeasurementLogic(GenericLogic):
 
         @param bool start: Start the measurement (True) or stop the measurement (False)
         """
+
         if start:
             self.start_pulsed_measurement(stash_raw_data_tag)
         else:
@@ -1051,6 +1052,7 @@ class PulsedMeasurementLogic(GenericLogic):
             if self.module_state() == 'locked':
                 # Update elapsed time
                 self.__elapsed_time = time.time() - self.__start_time
+                self.__elapsed_sweeps = self.fastcounter().get_sweeps()
 
                 # Get counter raw data (including recalled raw data from previous measurement)
                 self.raw_data = self._get_raw_data()

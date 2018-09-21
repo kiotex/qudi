@@ -1614,9 +1614,9 @@ class SequenceGeneratorLogic(GenericLogic):
         for sequence_step, (ensemble_name, seq_param) in enumerate(sequence.ensemble_list):
             if sequence.rotating_frame:
                 # to make something like 001
-                name_tag = ensemble_name + '_' + str(sequence_step).zfill(3)
+                name_tag = ensemble_name.name + '_' + str(sequence_step).zfill(3)
             else:
-                name_tag = ensemble_name
+                name_tag = ensemble_name.name
                 offset_bin = 0  # Keep the offset at 0
 
             # Only sample ensembles if they have not already been sampled

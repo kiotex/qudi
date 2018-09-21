@@ -642,9 +642,7 @@ class PulseSequence(object):
         """
         self.name = name
         self.rotating_frame = rotating_frame
-        self.ensemble_list = list()
-        if ensemble_list is not None:
-            self.extend(ensemble_list)
+        self.ensemble_list = list() if ensemble_list is None else ensemble_list
         self.is_finite = True
         self.refresh_parameters()
 

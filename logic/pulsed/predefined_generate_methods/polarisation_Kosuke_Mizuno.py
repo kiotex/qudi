@@ -66,7 +66,15 @@ class PolarizationTransferGenerator(PredefinedGeneratorBase):
         delay_element = self._get_delay_element()
         print(self.rabi_period)
 
-        pihalf_y_element = self._get_mw_rf_gate_element(length=self.rabi_period / 4,
+        pihalf_y_element = self._get_mw_rf_element(length=self.rabi_period / 4,
+                                                        increment=0,
+                                                        amp1=self.microwave_amplitude,
+                                                        freq1=self.microwave_frequency,
+                                                        phase1=90,
+                                                        amp2=0.0,
+                                                        freq2=self.microwave_frequency,
+                                                        phase2=0)
+        last_pihalf_y_element = self._get_mw_rf_gate_element(length=self.rabi_period / 4,
                                                         increment=0,
                                                         amp1=self.microwave_amplitude,
                                                         freq1=self.microwave_frequency,
@@ -105,7 +113,7 @@ class PolarizationTransferGenerator(PredefinedGeneratorBase):
             wfm_list.extend([pihalf_y_element, tauhalf_element])
             for j in range(pulse_num - 1):
                 wfm_list.extend([pi_x_element, tau_element])
-            wfm_list.extend([pi_x_element, tauhalf_element, pihalf_y_element])
+            wfm_list.extend([pi_x_element, tauhalf_element, last_pihalf_y_element])
             wfm_list.extend([laser_element, delay_element, waiting_element])
 
             name1 = 'CPMGu_%02i' % i

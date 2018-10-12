@@ -182,7 +182,7 @@ class PolarizationTransferGenerator(PredefinedGeneratorBase):
                                                    amp2=0.0,
                                                    freq2=self.microwave_frequency,
                                                    phase2=0)
-        
+
         last_pihalf_y_element = self._get_mw_rf_gate_element(length=self.rabi_period / 4,
                                                              increment=0,
                                                              amp1=self.microwave_amplitude,
@@ -215,10 +215,10 @@ class PolarizationTransferGenerator(PredefinedGeneratorBase):
 
         for t in tau_array:
 
-            tauhalf_element_plus = self._get_dc_element(length=t / 2 - self.rabi_period / 4, increment=0, vol=voltage)
-            tauhalf_element_minus = self._get_dc_element(length=t / 2 - self.rabi_period / 4, increment=0, vol=-voltage)
-            tau_element_plus = self._get_dc_element(length=t - self.rabi_period / 2, increment=0.0, vol=voltage)
-            tau_element_minus = self._get_dc_element(length=t - self.rabi_period / 2, increment=0.0, vol=-voltage)
+            tauhalf_element_plus = self._get_dc_element(length=t / 2 - self.rabi_period / 4, increment=0, vol1=voltage, vol2=0)
+            tauhalf_element_minus = self._get_dc_element(length=t / 2 - self.rabi_period / 4, increment=0, vol1=-voltage, vol2=0)
+            tau_element_plus = self._get_dc_element(length=t - self.rabi_period / 2, increment=0.0, vol1=voltage, vol2=0)
+            tau_element_minus = self._get_dc_element(length=t - self.rabi_period / 2, increment=0.0, vol1=-voltage, vol2=0)
 
             tau_elements = {1: tau_element_plus, -1: tau_element_minus}
             tauhalf_elements = {1: tauhalf_element_plus, -1: tauhalf_element_minus}

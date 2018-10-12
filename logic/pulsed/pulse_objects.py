@@ -1312,7 +1312,7 @@ class PredefinedGeneratorBase:
         delay_element = self._get_delay_gate_element()
         return [laser_element, delay_element, waiting_element]
 
-    def _get_dc_element(self, length, increment, vol=0):
+    def _get_dc_element(self, length, increment, vol1=0, vol2=0):
         """
         Creates an DC pulse PulseBlockElement
 
@@ -1331,9 +1331,12 @@ class PredefinedGeneratorBase:
             mw_element = self._get_idle_element(
                 length=length,
                 increment=increment)
+            mw_element.pulse_function['a_ch1'] = SamplingFunctions.DC(
+                voltage=vol1)
             mw_element.pulse_function['a_ch2'] = SamplingFunctions.DC(
-                voltage=vol)
+                voltage=vol2)
         return mw_element
+
 
     def _add_trigger(self, created_blocks, block_ensemble):
         if self.sync_channel:

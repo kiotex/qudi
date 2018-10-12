@@ -1312,6 +1312,28 @@ class PredefinedGeneratorBase:
         delay_element = self._get_delay_gate_element()
         return [laser_element, delay_element, waiting_element]
 
+    def _get_dc_element(self, length, increment, vol=0):
+        """
+        Creates an DC pulse PulseBlockElement
+
+        @param float length: DC duration in seconds
+        @param float increment: DC duration increment in seconds
+        @param float vol: DC bias voltage in V
+
+        @return: PulseBlockElement, the generated idle element
+        """
+        if self.microwave_channel.startswith('d'):
+            mw_element = self._get_trigger_element(
+                length=length,
+                increment=increment,
+                channels=self.microwave_channel)
+        else:
+            mw_element = self._get_idle_element(
+                length=length,
+                increment=increment)
+            mw_element.pulse_function['a_ch2'] = SamplingFunctions.DC(
+                voltage=vol)
+        return mw_element
 
     def _add_trigger(self, created_blocks, block_ensemble):
         if self.sync_channel:

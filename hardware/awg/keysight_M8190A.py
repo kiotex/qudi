@@ -62,7 +62,7 @@ class AWGM819X(Base, PulserInterface):
 
         self._sequence_mode = False         # set in on_activate()
         self.current_loaded_asset = ''
-        self.active_channel = dict()
+        self.active_channel = dict()        # todo: save to expose public?
         self._debug_check_all_commands = False       # for development purpose, might slow down
 
     def on_activate(self):
@@ -118,7 +118,7 @@ class AWGM819X(Base, PulserInterface):
         pass
 
     @property
-    @property
+    @abstractmethod
     def marker_on(self):
         pass
 
@@ -525,31 +525,35 @@ class AWGM819X(Base, PulserInterface):
 
             asset_name = 'ERROR_NAME'
 
-            if self.get_loaded_assets_num(chnl_num, mode='segment') == 1 \
+            if self.get_loaded_assets_num(chnl_num, mode='segment') >= 1 \
                 and self.get_loaded_assets_num(chnl_num, mode='sequence') == 0:
+                # arb mode with at least one waveform
 
                 type_per_ch.append('waveform')
-                asset_name = self.get_loaded_assets_name(chnl_num, mode='segment')[0]
+                seg_id_active = self.query(':TRAC{}:SEL?'.format(chnl_num))
+                asset_name = self.get_loaded_assets_name(chnl_num, mode='segment')[int(seg_id_active-1)]
 
             elif self.get_loaded_assets_num(chnl_num, mode='segment') >= 1 \
                 and self.get_loaded_assets_num(chnl_num, mode='sequence') == 1:
+                # seq mode with at least one waveform
 
                 type_per_ch.append('sequence')
                 asset_name = self.get_loaded_assets_name(chnl_num, mode='sequence')[0]
             elif self.get_loaded_assets_num(chnl_num, mode='segment') == 0 \
                 and self.get_loaded_assets_num(chnl_num, mode='sequence') == 0:
+                # arb mode but no waveform
 
                 type_per_ch.append('waveform')
                 asset_name = ''
 
             else:
                 is_err = True
-
+            """
             if self.get_loaded_assets_num(chnl_num, mode='segment') > 1 \
                 and self.get_loaded_assets_num(chnl_num, mode='sequence') == 0:
 
                 self.log.error("Multiple segments, but no sequence defined")
-
+            """
             if self.get_loaded_assets_num(chnl_num, mode='sequence') > 1:
                 self.log.error("Multiple sequences defined. Should only be 1.")
                 # todo: implement more than 1 sequence
@@ -557,6 +561,7 @@ class AWGM819X(Base, PulserInterface):
             loaded_assets[chnl_num] = asset_name
 
         if not all(x == type_per_ch[0] for x in type_per_ch):
+            # make sure type is same for all channels
             is_err = True
         if is_err:
             self.log.error('Unable to determine loaded assets.')
@@ -649,6 +654,8 @@ class AWGM819X(Base, PulserInterface):
             {'a_ch1': -0.5, 'a_ch4': 2.0} {'a_ch1': 0.0, 'a_ch2': 0.0, 'a_ch3': 1.0, 'a_ch4': 0.0}
         """
 
+        # todo: check whether old set_ac option in m8190a branch
+
         amp = dict()
         off = dict()
 
@@ -664,20 +671,20 @@ class AWGM819X(Base, PulserInterface):
                     ch_num = int(chnl.rsplit('_ch', 1)[1])
                     amp[chnl] = float(self.query(':VOLT{0:d}?'.format(ch_num)))
                 else:
-                    self.log.warning('Get analog amplitude from M8195A channel "{0}" failed. '
+                    self.log.warning('Get analog amplitude from channel "{0}" failed. '
                                      'Channel non-existent.'.format(chnl))
 
         # get voltage offsets
         if offset is None:
             for ch_num, chnl in enumerate(chnl_list):
-                off[chnl] = 0.0
+                off[chnl] = float(self.query(':VOLT{0:d}:OFFS?'.format(ch_num)))
         else:
             for chnl in offset:
                 if chnl in chnl_list:
                     ch_num = int(chnl.rsplit('_ch', 1)[1])
                     off[chnl] = float(self.query(':VOLT{0:d}:OFFS?'.format(ch_num)))
                 else:
-                    self.log.warning('Get analog offset from M8195A channel "{0}" failed. '
+                    self.log.warning('Get analog offset from channel "{0}" failed. '
                                      'Channel non-existent.'.format(chnl))
         return amp, off
 
@@ -896,64 +903,9 @@ class AWGM819X(Base, PulserInterface):
 
         return self.get_digital_level()
 
-
-    def get_active_channels(self, ch=None, set_ac=True):
-        """ Get the active channels of the pulse generator hardware.
-
-        @param list ch: optional, if specific analog or digital channels are needed to be asked
-                        without obtaining all the channels.
-
-        @return dict:  where keys denoting the channel string and items boolean expressions whether
-                       channel are active or not.
-
-        Example for an possible input (order is not important):
-            ch = ['a_ch2', 'd_ch2', 'a_ch1', 'd_ch5', 'd_ch1']
-        then the output might look like
-            {'a_ch2': True, 'd_ch2': False, 'a_ch1': False, 'd_ch5': True, 'd_ch1': False}
-
-        If no parameter (or None) is passed to this method all channel states will be returned.
-        """
-        # analog_channels = self._get_all_analog_channels()
-        #
-        # active_ch = dict()
-        # for ch_num, a_ch in enumerate(analog_channels, 1):
-        #     # check what analog channels are active
-        #     active_ch[a_ch] = bool(int(self.query(':OUTP{0}?'.format(ch_num))))
-        #
-        # # return either all channel information or just the one asked for.
-        # if ch is not None:
-        #     chnl_to_delete = [chnl for chnl in active_ch if chnl not in ch]
-        #     for chnl in chnl_to_delete:
-        #         del active_ch[chnl]
-
-        if ch is None:
-            ch = []
-
-        active_ch = dict()
-
-        if ch ==[]:
-            active_ch['a_ch1'] = bool(int(self.query(':OUTP1:NORM?')))
-            active_ch['a_ch2'] = bool(int(self.query(':OUTP2:NORM?')))
-
-            # marker channels are active if corresponding analogue channel on
-            active_ch['d_ch1'] = active_ch[self._digital_ch_corresponding_analogue_ch('d_ch1')]
-            active_ch['d_ch2'] = active_ch[self._digital_ch_corresponding_analogue_ch('d_ch2')]
-            active_ch['d_ch3'] = active_ch[self._digital_ch_corresponding_analogue_ch('d_ch3')]
-            active_ch['d_ch4'] = active_ch[self._digital_ch_corresponding_analogue_ch('d_ch4')]
-
-        else:
-            for channel in ch:
-                if 'a_ch' in channel:
-                    ana_chan = int(channel[4:])
-                    active_ch[channel] = bool(int(self.ask(':OUTP{0}:NORM?'.format(ana_chan))))
-
-                elif 'd_ch'in channel:
-                    active_ch[channel] = active_ch[self._digital_ch_corresponding_analogue_ch(channel)]
-
-        if set_ac:
-            self.active_channel = active_ch
-
-        return active_ch
+    @abstractmethod
+    def get_active_channels(self, ch=None):
+        pass
 
 
     def set_active_channels(self, ch=None):
@@ -1015,54 +967,62 @@ class AWGM819X(Base, PulserInterface):
                            ''.format(new_active_channels))
             return current_channel_state
 
-        # get lists of all analog channels
-        analog_channels = self._get_all_analog_channels()
-        digital_channels = self._get_all_digital_channels()
+        self._set_active_ch(new_channels_state)
 
-        # Also (de)activate the channels accordingly
-        for a_ch in analog_channels:
-            ach_num = int(a_ch.rsplit('_ch', 1)[1])
-            # (de)activate the analog channel
-            if new_channels_state[a_ch]:
-                self.write('OUTP{0:d}:NORM ON'.format(ach_num))
-            else:
-                self.write('OUTP{0:d}:NORM OFF'.format(ach_num))
+        return self.get_active_channels()
 
-        # digital channels belong to analogue ones
+    @abstractmethod
+    def _set_active_ch(self, new_channels_state):
+        pass
 
-        return self.get_active_channels(set_ac=True)
-
+    @abstractmethod
     def float_to_sample(self, val):
+       pass
+
+    def _float_to_int(self, val, n_bits):
+
         """
         :param val: np.array(dtype=float64) of sampled values from sequencegenerator.sample_pulse_block_ensemble().
                     normed (-1...1) where 1 encodes the full Vpp as set in 'PulsedGui/Pulsegenerator Settings'.
                     If MW ampl in 'PulsedGui/Predefined methods' < as full Vpp, amplitude reduction will be
                     performed digitally (reducing the effective digital resolution in bits).
+        :param n_bits: number of bits; sets the highest integer allowed. Eg. 8 bits -> int in [-128, 127]
         :return:    np.array(dtype=int16)
         """
 
+        bitsize = int(2 ** n_bits)
+        min_intval = -bitsize / 2
+        max_intval = bitsize / 2 - 1
 
-        bitsize = int(2**self._dac_resolution)
-        shiftbits = 16-self._dac_resolution   # 2 for marker, dac: 12 -> 2, dac: 14 -> 4
-        min_intval = -bitsize/2
-        max_intval =  bitsize/2 -1
-
-        max_u_samples = 1     # data should be normalized in (-1..1)
+        max_u_samples = 1  # data should be normalized in (-1..1)
 
         if max(abs(val)) > 1:
-            self.log.warning("Samples from sequencegenerator out of range. Normalizing to -1..1")
+            self.log.warning("Samples from sequencegenerator out of range. Normalizing to -1..1. Please change the "
+                             "maximum peak to peak Voltage in the Pulse Generator Settings if you want to use a higher "
+                             "power.")
             biggest_val = max([abs(np.min(val)), np.max(val)])
             max_u_samples = biggest_val
         # manual 8.22.4 Waveform Data Format in Direct Mode
         # 2 bits LSB reserved for markers
-        mapper = scipy.interpolate.interp1d([-max_u_samples,max_u_samples],[min_intval, max_intval])
-        return mapper(val).astype('int16') << shiftbits
+        mapper = scipy.interpolate.interp1d([-max_u_samples, max_u_samples], [min_intval, max_intval])
 
-    def bool_to_sample(self, marker_val_sample, marker_val_sync):
-        bit_marker = 0x1 & np.asarray(marker_val_sample).astype('int16')
-        bit_sync =   0x2 & np.asarray(marker_val_sync).astype('int16') << 1
+        return mapper(val)
 
-        return bit_marker + bit_sync
+    def bool_to_sample(self, val_dch_1, val_dch_2, int_type_str='int16'):
+        """
+        Takes 2 digital sample values from the sequence generator and converts them to int.
+        For AWG819x always two digital channels are tied with a single analogue output.
+        The resulting int values are used to construct the binary samples.
+        :param vals_dch_1: np.ndarray, digital samples from the sequence generator
+        :param vals_dch_2: np.ndarray, digital samples from the sequence generator
+        :param int_type_str: int type the output is casted to
+        :return:
+        """
+
+        bit_dch_1 = 0x1 & np.asarray(val_dch_1).astype(int_type_str)
+        bit_dch_2 = 0x2 & (np.asarray(val_dch_2).astype(int_type_str) << 1)
+
+        return bit_dch_1 + bit_dch_2
 
     def write_waveform(self, name, analog_samples, digital_samples, is_first_chunk, is_last_chunk,
                        total_number_of_samples):
@@ -1142,11 +1102,11 @@ class AWGM819X(Base, PulserInterface):
 
         for channel_index, channel_number in enumerate(active_analog):
 
+            self.log.debug('Max ampl, ch={0}: {1}'.format(channel_number, analog_samples[channel_number].max()))
             comb_samples = self._compile_bin_samples(analog_samples, digital_samples, channel_number)
 
             if self._wave_mem_mode == 'pc_hdd':
-
-                self.log.debug('Max ampl, ch={0}: {1}'.format(channel_number, analog_samples[channel_number].max()))
+                # todo: check if working for awg8195a
 
                 filename = name + '_ch' + str(channel_index + 1) + '.bin'  # all names lowercase to avoid trouble
                 waveforms.append(filename)
@@ -1160,15 +1120,27 @@ class AWGM819X(Base, PulserInterface):
 
             elif self._wave_mem_mode == 'awg_segments':
                 # todo: avoid naming convention to write to specific segment
+                # todo: check if working for awg8190a
                 if name.split(',')[0] == name:
                     segment_id = 1
                 else:
                     segment_id = np.int(name.split(',')[0])
 
-                self.write(':TRAC{0}:DEF {1}, {2}, {3}'.format(int(channel_index + 1), segment_id, len(a_samples), 0))
-                self.write_bin(':TRAC{0}:DATA {1}, {2},'.format(int(channel_index + 1), segment_id, 0), a_samples)
+                # delete if the segment is already existing
+                loaded_segments = self.query(':TRAC:CAT?')
+                if str(segment_id) in loaded_segments.split(',')[::2]:
+                    # clear the segment
+                    self.write(':TRAC:DEL {0}'.format(segment_id))
+
+                # define the size of a waveform segment, marker samples do not count. If the channel is sourced from
+                # Extended Memory, the same segment is defined on all other channels sourced from Extended Memory.
+                self.write(':TRAC{0}:DEF {1}, {2}, {3}'.format(int(channel_index + 1), segment_id, len(comb_samples), 0))
+
+                # name the segment
                 self.write(':TRAC:NAME {0}, "{1}"'.format(segment_id, name))  # name the segment
-                #print('hier', self.query(':TRAC:NAME? {0}'.format(int(segment_id))))
+                # upload
+                self.write_bin(':TRAC{0}:DATA {1}, {2},'.format(int(channel_index + 1), segment_id, 0), comb_samples)
+
                 waveforms.append(name)
 
             else:
@@ -1176,7 +1148,22 @@ class AWGM819X(Base, PulserInterface):
 
         return waveforms
 
+    def _delete_all_sequences(self):
+        # awg8195a has no sequence subsystem and does not need according cmds
+        pass
+
+    def _define_new_sequence(self, name, n_steps):
+        pass
+
+    def _get_sequences(self):
+        pass
+
+    @abstractmethod
+    def _get_sequence_control_bin(self, sequence_parameters, idx_step):
+        pass
+
     def write_sequence(self, name, sequence_parameters):
+        # todo: update docstrings with newest interface version
         """
         Write a new sequence on the device memory.
         If elements in the sequence are not available on the AWG yet, they will be
@@ -1204,89 +1191,68 @@ class AWGM819X(Base, PulserInterface):
 
         # todo: check sequence mathces num_tracks
 
-        active_analog = natural_sort(chnl for chnl in self.get_active_channels() if chnl.startswith('a'))
-        num_tracks = len(active_analog)
         num_steps = len(sequence_parameters)
 
-        # define new sequence
-        self.write(':FUNC1:MODE STS')  # activate the sequence mode
-        self.write(':FUNC2:MODE STS')
-        self.write(':STAB1:RES')  # Reset all sequence table entries to default values
-        self.write(':STAB2:RES')
-        self.write(':SEQ1:DEL:ALL')
-        self.write(':SEQ2:DEL:ALL')
-        #self.write(':ARM:DYNP:WIDT LOW')  # Only use lower 13 bits of dynamic input
+        self.write_all_ch(':FUNC{}:MODE STS', all_by_one={'m8195a': True})  # activate the sequence mode
+        self.write_all_ch(':STAB{}:RES', all_by_one={'m8195a': True})       # Reset all sequence table entries to default values
 
-        seq_id_ch1 = int(self.query(":SEQ1:DEF:NEW? {:d}".format(num_steps)))
-        seq_id_ch2 = int(self.query(":SEQ2:DEF:NEW? {:d}".format(num_steps)))
-        if seq_id_ch1 != seq_id_ch2:
-            self.log.warning("Sequence tables for channels seem not aligned.")
-        self.write(":SEQ1:NAME {:d}, '{}'".format(seq_id_ch1, name))
-        self.write(":SEQ2:NAME {:d}, '{}'".format(seq_id_ch2, name))
+        self._define_new_sequence(name, num_steps)
 
-        loaded_segments_ch1 = self.get_loaded_assets_name(1, mode='segment')
-        loaded_segments_ch2 = self.get_loaded_assets_name(2, mode='segment')
+        if self._wave_mem_mode == 'pc_hdd':
+            # todo: will skip already loaded waveforms
+            # check whether this works as intended with <generate_new> mechanism
+            # generate new needs to invalidate loaded assets
+            loaded_segments_ch1 = self.get_loaded_assets_name(1, mode='segment')
+            loaded_segments_ch2 = self.get_loaded_assets_name(2, mode='segment')
 
-        waves_loaded_here = []
-        # transfer waveforms in sequence from local pc to segments in awg mem
-        for waveform_tuple, param_dict in sequence_parameters:
-            # todo: handle other than 2 channels
-            waveform_list = []
-            waveform_list.append(waveform_tuple[0])
-            waveform_list.append(waveform_tuple[1])
-            wave_ch1 = self._remove_file_extension(waveform_tuple[0])
-            wave_ch2 = self._remove_file_extension(waveform_tuple[1])
+            waves_loaded_here = []
+            # transfer waveforms in sequence from local pc to segments in awg mem
+            for waveform_tuple, param_dict in sequence_parameters:
+                # todo: handle other than 2 channels
+                waveform_list = []
+                waveform_list.append(waveform_tuple[0])
+                waveform_list.append(waveform_tuple[1])
+                wave_ch1 = self._remove_file_extension(waveform_tuple[0])
+                wave_ch2 = self._remove_file_extension(waveform_tuple[1])
 
-            if not (wave_ch1 in loaded_segments_ch1 and
-                    wave_ch2 in loaded_segments_ch2) \
-                    and not (wave_ch1 in waves_loaded_here and
-                    wave_ch2 in waves_loaded_here):
+                if not (wave_ch1 in loaded_segments_ch1 and
+                        wave_ch2 in loaded_segments_ch2) \
+                        and not (wave_ch1 in waves_loaded_here and
+                        wave_ch2 in waves_loaded_here):
 
-                self.log.debug("Couldn't find segments {} and {} on device for writing sequence {}. Loading...".format(
-                    wave_ch1, wave_ch2, name))
-                self.load_waveform(waveform_list, to_nextfree_segment=True)
-                waves_loaded_here.append(wave_ch1)
-                waves_loaded_here.append(wave_ch2)
-            else:
-                self.log.debug("Segments {} and {} already on device for writing sequence {}. Skipping load.".format(
-                    wave_ch1, wave_ch2, name))
+                    self.log.debug("Couldn't find segments {} and {} on device for writing sequence {}. Loading...".format(
+                        wave_ch1, wave_ch2, name))
+                    self.load_waveform(waveform_list, to_nextfree_segment=True)
+                    waves_loaded_here.append(wave_ch1)
+                    waves_loaded_here.append(wave_ch2)
+                else:
+                    self.log.debug("Segments {} and {} already on device for writing sequence {}. Skipping load.".format(
+                        wave_ch1, wave_ch2, name))
 
-        self.log.debug("Loading of waveforms for sequence write finished.")
+            self.log.debug("Loading of waveforms for sequence write finished.")
+        elif self._wave_mem_mode == 'awg_segments':
+            # all segments must be present on device mem arlready
+            pass
+        else:
+            raise ValueError("Unknown memory mode: {}".format(self._wave_mem_mode))
+
         """
-        Manual: When using dynamic sequencing, the arm mode must be set to self-armed 
+        8190a manual: When using dynamic sequencing, the arm mode must be set to self-armed 
         and all advancement modes must be set to Auto. 
         Additionally, the trigger mode Gated is not allowed.
         """
 
+        # write the actual sequence table
         ctr_steps_written = 0
         goto_in_sequence = False
         for step, (wfm_tuple, seq_step) in enumerate(sequence_parameters, 1):
 
-            try:
-                next_step = sequence_parameters[step + 1][1]
-            except IndexError:
-                next_step = None
+            index = step - 1
 
             if seq_step['go_to'] != -1:
                 goto_in_sequence = True
 
-            index = step - 1
-            control = 0
-
-            if index == 0:
-                control = 0x1 << 28   # bit 28 (=0x10000000): mark as sequence start
-            # in use case with external pattern jump, every segment with an address
-            # defines a "sequence" (as defined in Keysight manual)
-            if 'pattern_jump_address' in seq_step:
-                control = 0x1 << 28
-
-            if index + 1 == num_steps:
-                control = 0x1 << 30   # bit 30: mark as sequence end
-            if next_step:
-                if 'pattern_jump_address' in next_step:
-                    control = 0x1 << 30
-
-            control += 0x1 << 24    # always enable markers
+            control = self._get_sequence_control_bin(sequence_parameters, index)
 
             seq_loop_count = 1
             if seq_step.repetitions == -1:
@@ -1306,23 +1272,25 @@ class AWGM819X(Base, PulserInterface):
 
             try:
                 # creates all segments as data entries
-                self.write(':STAB1:DATA {0}, {1}, {2}, {3}, {4}, {5}, {6}'
-                           .format(index,
-                                   control,
-                                   seq_loop_count,
-                                   seg_loop_count,
-                                   segment_id_ch1,
-                                   seg_start_offset,
-                                   seg_end_offset))
-
-                self.write(':STAB2:DATA {0}, {1}, {2}, {3}, {4}, {5}, {6}'
-                           .format(index,
-                                   control,
-                                   seq_loop_count,
-                                   seg_loop_count,
-                                   segment_id_ch2,
-                                   seg_start_offset,
-                                   seg_end_offset))
+                if segment_id_ch1 > -1:
+                    # STAB will default to STAB1 on 8190A
+                    self.write(':STAB:DATA {0}, {1}, {2}, {3}, {4}, {5}, {6}'
+                               .format(index,
+                                       control,
+                                       seq_loop_count,
+                                       seg_loop_count,
+                                       segment_id_ch1,
+                                       seg_start_offset,
+                                       seg_end_offset))
+                if segment_id_ch2 > -1:
+                    self.write(':STAB2:DATA {0}, {1}, {2}, {3}, {4}, {5}, {6}'
+                               .format(index,
+                                       control,
+                                       seq_loop_count,
+                                       seg_loop_count,
+                                       segment_id_ch2,
+                                       seg_start_offset,
+                                       seg_end_offset))
 
                 ctr_steps_written += 1
 
@@ -1334,6 +1302,9 @@ class AWGM819X(Base, PulserInterface):
         if goto_in_sequence and self.get_constraints().sequence_order == SequenceOrderOption.LINONLY:
             self.log.warning("Found go_to in step of sequence {}. Not supported and ignored.".format(name))
 
+        while int(self.query('*OPC?')) != 1:
+            time.sleep(0.25)
+
         return ctr_steps_written
 
     def get_waveform_names(self):
@@ -1343,7 +1314,24 @@ class AWGM819X(Base, PulserInterface):
         @return list: List of all uploaded waveform name strings in the device workspace.
         """
 
-        return self.query('MMEM:CAT?').replace('"','').replace("'","").split(",")[2::3]
+        names = []
+
+        if self._wave_mem_mode == 'pc_hdd':
+            names = self.query('MMEM:CAT?').replace('"', '').replace("'", "").split(",")[2::3]
+        elif self._wave_mem_mode == 'awg_segments':
+
+            # Get all active channels
+            chnl_activation = self.get_active_channels()
+            channel_numbers = sorted(int(chnl.split('_ch')[1]) for chnl in chnl_activation if
+                                     chnl.startswith('a') and chnl_activation[chnl])
+            for chnl_num in channel_numbers:
+                names.extend(self.get_loaded_assets_name(chnl_num, 'segment'))
+            names = list(set(names)) # make unique
+
+        else:
+            raise ValueError("Unknown memory mode: {}".format(self._wave_mem_mode))
+
+        return names
 
     def get_sequence_names(self):
         """ Retrieve the names (without file extension) of all uploaded sequence on the device.
@@ -1356,14 +1344,27 @@ class AWGM819X(Base, PulserInterface):
         if not self.has_sequence_mode():
             return sequence_list
 
-        # get only the files from the dir and skip possible directories
-        log = os.listdir(self._assets_storage_path)
-        file_list = [line for line in log if not os.path.isdir(line)]
+        if self._wave_mem_mode == 'pc_hdd':
+            # get only the files from the dir and skip possible directories
+            log = os.listdir(self._assets_storage_path)
+            file_list = [line for line in log if not os.path.isdir(line)]
 
-        for filename in file_list:
-            if filename.endswith(('.seq', '.seqx', '.sequence')):
-                if filename not in sequence_list:
-                    sequence_list.append(self._remove_file_extension(filename))
+            for filename in file_list:
+                if filename.endswith(('.seq', '.seqx', '.sequence')):
+                    if filename not in sequence_list:
+                        sequence_list.append(self._remove_file_extension(filename))
+        elif self._wave_mem_mode == 'awg_segments':
+            seqs_ch1 = self.get_loaded_assets_name(1, 'sequence')
+            seqs_ch2 = self.get_loaded_assets_name(2, 'sequence')
+
+            if seqs_ch1 != seqs_ch2:
+                self.log.error("Sequence tables for ch1/2 seem unaligned! ch1: {} ch2: {}".format(seqs_ch1,
+                                                                                                  seqs_ch2))
+            return seqs_ch1
+        else:
+            raise ValueError("Unknown memory mode: {}".format(self._wave_mem_mode))
+
+
         return sequence_list
 
     def delete_waveform(self, waveform_name):
@@ -1417,6 +1418,11 @@ class AWGM819X(Base, PulserInterface):
         # clear the AWG if the deleted asset is the currently loaded asset
         if self.current_loaded_asset == sequence_name:
             self.clear_all()
+            self.write_all_ch(':STAB{}:RES',
+                              all_by_one={'m8195a': True})  # Reset all sequence table entries to default values
+        else:
+            self.log.info("Sequence {} is not active. Didn't delete.".format(sequence_name))
+
         return deleted_sequences
 
     def get_interleave(self):
@@ -1738,11 +1744,23 @@ class AWGM819X(Base, PulserInterface):
             return -1
         return id
 
+    @abstractmethod
+    def _get_loaded_seq_catalogue(self, ch_num):
+        pass
+
+    @abstractmethod
+    def _get_loaded_seq_name(self, ch_num, idx):
+        pass
+
     def get_loaded_assets_num(self, ch_num, mode='segment'):
+        """
+        Retrieves the total number of assets uploaded to the awg memory.
+        This is not == "loaded_asset" which is the waveform / segment marked active.
+        """
         if mode == 'segment':
             raw_str = self.query(':TRAC{:d}:CAT?'.format(ch_num))
         elif mode == 'sequence':
-            raw_str = self.query(':SEQ{:d}:CAT?'.format(ch_num))
+            raw_str = self._get_loaded_seq_catalogue(ch_num)
         else:
             self.log.warn("Unknown assets mode: {}".format(mode))
             return 0
@@ -1754,31 +1772,12 @@ class AWGM819X(Base, PulserInterface):
 
             return int(len(splitted)/2)
 
-    def get_loaded_assets_name(self, ch_num, mode='segment'):
-
-        n_assets = self.get_loaded_assets_num(ch_num, mode)
-        names = []
-        for i in range(0, n_assets):
-
-            if mode == 'segment':
-                names.append(self.query(':TRAC{:d}:NAME? {:d}'.format(ch_num, i+1)))
-            elif mode == 'sequence':
-                names.append(self.query(':SEQ{:d}:NAME? {:d}'.format(ch_num, i)))
-            else:
-                self.log.warn("Unknown assets mode: {}".format(mode))
-                return 0
-
-        if n_assets == 0:
-            return []
-        else:
-            return names
-
     def get_loaded_assets_id(self, ch_num, mode='segment'):
 
         if mode == 'segment':
             raw_str = self.query(':TRAC{:d}:CAT?'.format(ch_num))
         elif mode == 'sequence':
-            raw_str = self.query(':SEQ{:d}:CAT?'.format(ch_num))
+            raw_str = self._get_loaded_seq_catalogue(ch_num)
         else:
             self.log.warn("Unknown assets mode: {}".format(mode))
             return []
@@ -1791,6 +1790,25 @@ class AWGM819X(Base, PulserInterface):
             ids = [int(x) for x in splitted[0::2]]
 
             return ids
+
+    def get_loaded_assets_name(self, ch_num, mode='segment'):
+
+        n_assets = self.get_loaded_assets_num(ch_num, mode)
+        names = []
+        for i in range(0, n_assets):
+
+            if mode == 'segment':
+                names.append(self.query(':TRAC{:d}:NAME? {:d}'.format(ch_num, i+1)))
+            elif mode == 'sequence':
+                self._get_loaded_seq_name(ch_num, i)
+            else:
+                self.log.warn("Unknown assets mode: {}".format(mode))
+                return 0
+
+        if n_assets == 0:
+            return []
+        else:
+            return names
 
     def get_sequencer_state(self, ch_num):
         """
@@ -1872,8 +1890,14 @@ class AWGM8195A(AWGM819X):
     awg_mode = ConfigOption(name='awg_mode', default='FOUR', missing='warn')
     sample_rate_div = ConfigOption(name='sample_rate_div', default=4, missing='warn')
 
+    _dac_resolution = 8  # fixed 8 bit
     # physical output channel mapping
     ch_map = {'d_ch1': 3, 'd_ch2': 4}   # awg8195a: digital channels are analogue channels, only different config
+
+    def __init__(self, config, **kwargs):
+        super().__init__(config=config, **kwargs)
+
+        self._sequence_names = []  # awg8195a can only store a single sequence
 
     @property
     def n_ch(self):
@@ -2034,28 +2058,151 @@ class AWGM8195A(AWGM819X):
 
     def _compile_bin_samples(self, analog_samples, digital_samples, ch_num):
 
-        marker = self.marker_on
-        max_ampl = 0.5
+        marker_mode = self.marker_on
 
-        # todo: write a proper float_to_div function
-        # todo: hard coded max_ampl looks werid
-        a_samples = (((analog_samples[ch_num] + max_ampl) / (2 * max_ampl) * 255) - 128).astype(
-            'int8')  # TODO insert Vpp here
-        if marker and ch_num == 'a_ch1':
-            d_samples = digital_samples['d_ch1'].astype('int8') + 2 * digital_samples['d_ch2'].astype(
-                'int8')  # TODO channels are hardcoded
+        a_samples = self.float_to_sample(analog_samples[ch_num])
+
+        if marker_mode and ch_num == 'a_ch1':
+            d_samples = self.bool_to_sample(digital_samples['d_ch1'], digital_samples['d_ch2'],
+                                            int_type_str='int8')
+
+            # the analog and digital samples are stored in the following format: a1, d1, a2, d2, a3, d3, ...
             comb_samples = np.zeros(2 * a_samples.size, dtype=np.int8)
             comb_samples[::2] = a_samples
             comb_samples[1::2] = d_samples
+
         else:
-            comb_samples = a_samples  # TODO use interleaved_samples
-            # filename = name + '_ch' + str(channel_index + 1) + '_' + str(len(interleaved_samples)) + '.bin8'
+            comb_samples = a_samples
 
         return comb_samples
 
     def _get_digital_ch_cmd(self, digital_ch_name):
         d_ch_internal = self._digital_ch_2_internal(digital_ch_name)
         return ':VOLT{0:d}'.format(d_ch_internal)
+
+    def get_active_channels(self, ch=None):
+        """ Get the active channels of the pulse generator hardware.
+
+        @param list ch: optional, if specific analog or digital channels are needed to be asked
+                        without obtaining all the channels.
+
+        @return dict:  where keys denoting the channel string and items boolean expressions whether
+                       channel are active or not.
+
+        Example for an possible input (order is not important):
+            ch = ['a_ch2', 'd_ch2', 'a_ch1', 'd_ch5', 'd_ch1']
+        then the output might look like
+            {'a_ch2': True, 'd_ch2': False, 'a_ch1': False, 'd_ch5': True, 'd_ch1': False}
+
+        If no parameter (or None) is passed to this method all channel states will be returned.
+        """
+
+        if ch is None:
+            ch = []
+
+        active_ch = dict()
+
+        if ch ==[]:
+
+            # because 0 = False and 1 = True
+            awg_mode = self.query(':INST:DACM?')
+            self.log.debug('awg mode is {0}'.format(awg_mode))
+            if awg_mode == 'MARK':
+                active_ch['a_ch1'] = bool(int(self.query(':OUTP1?')))
+                active_ch['d_ch1'] = bool(int(self.query(':OUTP3?')))
+                active_ch['d_ch2'] = bool(int(self.query(':OUTP4?')))
+            elif awg_mode == 'SING':
+                active_ch['a_ch1'] = bool(int(self.query(':OUTP1?')))
+            elif awg_mode == 'DUAL':
+                active_ch['a_ch1'] = bool(int(self.query(':OUTP1?')))
+                active_ch['a_ch4'] = bool(int(self.query(':OUTP4?')))
+            elif awg_mode == 'FOUR':
+                active_ch['a_ch1'] = bool(int(self.query(':OUTP1?')))
+                active_ch['a_ch2'] = bool(int(self.query(':OUTP2?')))
+                active_ch['a_ch3'] = bool(int(self.query(':OUTP3?')))
+                active_ch['a_ch4'] = bool(int(self.query(':OUTP4?')))
+
+
+
+        else:
+
+            for channel in ch:
+                if 'a_ch' in channel:
+                    ana_chan = int(channel[4:])
+                    active_ch[channel] = bool(int(self.ask(':OUTP{0}?'.format(ana_chan))))
+
+                elif 'd_ch'in channel:
+                    self.log.warning('Digital channel "{0}" cannot be '
+                                     'activated! Command ignored.'
+                                     ''.format(channel))
+                    active_ch[channel] = False
+
+        return active_ch
+
+    def _set_active_ch(self, new_channels_state):
+        # get lists of all analog channels
+        analog_channels = self._get_all_analog_channels()
+        digital_channels = self._get_all_digital_channels()
+
+        # Also (de)activate the channels accordingly
+        for a_ch in analog_channels:
+            ach_num = int(a_ch.rsplit('_ch', 1)[1])
+            # (de)activate the analog channel
+            if new_channels_state[a_ch]:
+                self.write('OUTP{0:d} ON'.format(ach_num))
+            else:
+                self.write('OUTP{0:d} OFF'.format(ach_num))
+
+        for d_ch in digital_channels:
+            dch_num = int(d_ch.rsplit('_ch', 1)[1])+2
+            # (de)activate the digital channel
+            if new_channels_state[d_ch]:
+                self.write('OUTP{0:d} ON'.format(dch_num))
+            else:
+                self.write('OUTP{0:d} OFF'.format(dch_num))
+
+    def float_to_sample(self, val):
+
+        val_int = self._float_to_int(val, self._dac_resolution)
+
+        return val_int.astype('int8')
+
+    def _get_loaded_seq_catalogue(self, ch_num):
+
+        if not self._sequence_names:
+            return '0, 0'  # signals no sequence loaded
+
+        # mimic awg8190 format 'sequence_id, length in segments'
+        # we don't need the length here, so dummy value
+        return '0, -1'
+
+    def _get_loaded_seq_name(self, ch_num, idx):
+
+        if idx > 0:
+            self.log.warn("AWG8195A does not support loading of multiple sequences")
+
+        return self._sequence_names[0]
+
+    def _get_sequence_control_bin(self, sequence_parameters, idx_step):
+
+        index = idx_step
+        num_steps = len(sequence_parameters)
+
+        if self.awg_mode == 'MARK':
+            control = 2 ** 24  # set marker
+        elif self.awg_mode == 'FOUR':
+            control = 0
+        else:
+            self.log.error("The AWG mode '{0}' is not implemented yet!".format(self.awg_mode))
+            return
+
+        if index == 0:
+            control += 2 ** 28  # set start sequence
+        if index + 1 == num_steps:
+            control += 2 ** 30  # set end sequence
+
+        return control
+
 
 class AWGM8190A(AWGM819X):
     """ A hardware module for the Keysight M8190A series for generating
@@ -2247,7 +2394,7 @@ class AWGM8190A(AWGM819X):
         a_samples = self.float_to_sample(analog_samples[ch_num])
         marker_sample = digital_samples[self._analogue_ch_corresponding_digital_chs(ch_num)[0]]
         marker_sync = digital_samples[self._analogue_ch_corresponding_digital_chs(ch_num)[1]]
-        d_samples = self.bool_to_sample(marker_sample, marker_sync)
+        d_samples = self.bool_to_sample(marker_sample, marker_sync, int_type_str='int16')
         if marker:
             comb_samples = a_samples + d_samples
         else:
@@ -2258,3 +2405,133 @@ class AWGM8190A(AWGM819X):
     def _get_digital_ch_cmd(self, digital_ch_name):
         d_ch_internal = self._digital_ch_2_internal(digital_ch_name)
         return ':{}:VOLT'.format(d_ch_internal)
+
+    def get_active_channels(self, ch=None):
+        """ Get the active channels of the pulse generator hardware.
+
+        @param list ch: optional, if specific analog or digital channels are needed to be asked
+                        without obtaining all the channels.
+
+        @return dict:  where keys denoting the channel string and items boolean expressions whether
+                       channel are active or not.
+
+        Example for an possible input (order is not important):
+            ch = ['a_ch2', 'd_ch2', 'a_ch1', 'd_ch5', 'd_ch1']
+        then the output might look like
+            {'a_ch2': True, 'd_ch2': False, 'a_ch1': False, 'd_ch5': True, 'd_ch1': False}
+
+        If no parameter (or None) is passed to this method all channel states will be returned.
+        """
+
+        if ch is None:
+            ch = []
+
+        active_ch = dict()
+
+        if ch == []:
+            active_ch['a_ch1'] = bool(int(self.query(':OUTP1:NORM?')))
+            active_ch['a_ch2'] = bool(int(self.query(':OUTP2:NORM?')))
+
+            # marker channels are active if corresponding analogue channel on
+            active_ch['d_ch1'] = active_ch[self._digital_ch_corresponding_analogue_ch('d_ch1')]
+            active_ch['d_ch2'] = active_ch[self._digital_ch_corresponding_analogue_ch('d_ch2')]
+            active_ch['d_ch3'] = active_ch[self._digital_ch_corresponding_analogue_ch('d_ch3')]
+            active_ch['d_ch4'] = active_ch[self._digital_ch_corresponding_analogue_ch('d_ch4')]
+
+        else:
+            for channel in ch:
+                if 'a_ch' in channel:
+                    ana_chan = int(channel[4:])
+                    active_ch[channel] = bool(int(self.ask(':OUTP{0}:NORM?'.format(ana_chan))))
+
+                elif 'd_ch' in channel:
+                    active_ch[channel] = active_ch[self._digital_ch_corresponding_analogue_ch(channel)]
+
+        set_ac = True
+        if set_ac:
+            self.active_channel = active_ch
+
+        return active_ch
+
+    def _set_active_ch(self, new_channels_state):
+
+        # get lists of all analog channels
+        analog_channels = self._get_all_analog_channels()
+        digital_channels = self._get_all_digital_channels()
+
+        # Also (de)activate the channels accordingly
+        # awg8190a: digital channels belong to analogue ones
+        for a_ch in analog_channels:
+            ach_num = int(a_ch.rsplit('_ch', 1)[1])
+            # (de)activate the analog channel
+            if new_channels_state[a_ch]:
+                self.write('OUTP{0:d}:NORM ON'.format(ach_num))
+            else:
+                self.write('OUTP{0:d}:NORM OFF'.format(ach_num))
+
+
+    def float_to_sample(self, val):
+
+        val_int = self._float_to_int(val, self._dac_resolution)
+        shiftbits = 16 - self._dac_resolution  # 2 for marker, dac: 12 -> 2, dac: 14 -> 4
+
+        return val_int.astype('int16') << shiftbits
+
+    def _delete_all_sequences(self):
+
+        self.write_all_ch(':SEQ{}:DEL:ALL')
+
+    def _define_new_sequence(self, name, n_steps):
+
+        seq_id_ch1 = int(self.query(":SEQ1:DEF:NEW? {:d}".format(n_steps)))
+        seq_id_ch2 = int(self.query(":SEQ2:DEF:NEW? {:d}".format(n_steps)))
+        if seq_id_ch1 != seq_id_ch2:
+            self.log.warning("Sequence tables for channels seem not aligned.")
+        self.write(":SEQ1:NAME {:d}, '{}'".format(seq_id_ch1, name))
+        self.write(":SEQ2:NAME {:d}, '{}'".format(seq_id_ch2, name))
+
+    def _get_loaded_seq_catalogue(self, ch_num):
+        return self.query(':SEQ{:d}:CAT?'.format(ch_num))
+
+    def _get_loaded_seq_name(self, ch_num, idx):
+        """
+        :param ch_num:
+        :param idx: 0,1,2. Not the sequenceId = seqtable id of first element in sequence
+        :return:
+        """
+        seq_id = self.get_loaded_assets_id(ch_num, 'sequence')[idx]
+        return self.query(':SEQ{:d}:NAME? {:d}'.format(ch_num, seq_id))
+
+
+    def _get_sequence_control_bin(self, sequence_parameters, idx_step):
+
+        index = idx_step
+        wfm_tuple, seq_step = sequence_parameters[index]
+        num_steps = len(sequence_parameters)
+
+        try:
+            next_step = sequence_parameters[index + 1][1]
+        except IndexError:
+            next_step = None
+
+        control = 0
+
+        if index == 0:
+            control = 0x1 << 28  # bit 28 (=0x10000000): mark as sequence start
+        if index + 1 == num_steps:
+            control = 0x1 << 30  # bit 30: mark as sequence end
+
+        # in use case with external pattern jump, every segment with an address
+        # defines a "sequence" (as defined in Keysight manual)
+        if 'pattern_jump_address' in seq_step:
+            control = 0x1 << 28
+        if next_step:
+            if 'pattern_jump_address' in next_step:
+                control = 0x1 << 30
+
+        control += 0x1 << 24  # always enable markers
+
+        return control
+
+
+

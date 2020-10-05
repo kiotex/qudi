@@ -432,6 +432,7 @@ class AWGM819X(Base, PulserInterface):
                            'Make sure to call write_sequence() first.')
             return self.get_loaded_assets()
 
+        self.write_all_ch(':FUNC{}:MODE STS', all_by_one={'m8195a': True})  # activate the sequence mode
         """
         select the first segment in your sequence, before any dynamic sequence selection.
         """
@@ -439,6 +440,8 @@ class AWGM819X(Base, PulserInterface):
         self.write(":STAB2:SEQ:SEL 0")
         self.write(":STAB1:DYN ON")
         self.write(":STAB2:DYN ON")
+        # todo: for merging with master other seuence trigger mode might be required
+        self.set_trigger_mode('trig')  # for external dynamic control, different for other usecase
 
         return 0
 
@@ -1807,7 +1810,7 @@ class AWGM819X(Base, PulserInterface):
             if mode == 'segment':
                 names.append(self.query(':TRAC{:d}:NAME? {:d}'.format(ch_num, i+1)))
             elif mode == 'sequence':
-                self._get_loaded_seq_name(ch_num, i)
+                names.append(self._get_loaded_seq_name(ch_num, i))
             else:
                 self.log.warn("Unknown assets mode: {}".format(mode))
                 return 0

@@ -49,8 +49,8 @@ class AWGM819X(Base, PulserInterface):
     _assets_storage_path = ConfigOption(name='assets_storage_path', default=os.path.join(get_home_dir(), 'saved_pulsed_assets'),
                                        missing='warn')
     _sample_rate_div = ConfigOption(name='sample_rate_div', default=1, missing='warn')
-    _dac_amp_mode = 'direct'    # see manual 1.2 'options'
-    _wave_mem_mode = 'pc_hdd'  # 'awg_segments'
+    _dac_amp_mode = None
+    _wave_mem_mode = None
 
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
@@ -340,7 +340,7 @@ class AWGM819X(Base, PulserInterface):
         # Check if all waveforms to load are present on device memory
         if not set(load_dict.values()).issubset(self.get_waveform_names()):
             self.log.error('Unable to load waveforms into channels.\n'
-                           'One or more waveforms to load are missing on pc memory: {}'.format(
+                           'One or more waveforms to load are missing: {}'.format(
                                                                             set(load_dict.values())
             ))
             return self.get_loaded_assets()
@@ -383,13 +383,15 @@ class AWGM819X(Base, PulserInterface):
 
             # todo: check required file naming. seems like segment number in filename
             # we should replace with internal book keeping here
-            waveform = load_dict[0]
-            name = waveform
-            if name.split(',')[0] == name:
-                segment_id = 1
-            else:
-                segment_id = np.int(name.split(',')[0])
-            self.write(':TRAC:SEL {0}'.format(segment_id))
+
+            for chnl_num, waveform in load_dict.items():
+                waveform = load_dict[chnl_num]
+                name = waveform
+                if name.split(',')[0] == name:
+                    segment_id = 1
+                else:
+                    segment_id = np.int(name.split(',')[0])
+                self.write(':TRAC:SEL {0}'.format(segment_id))
 
 
         else:
@@ -569,7 +571,7 @@ class AWGM819X(Base, PulserInterface):
             self.log.error('Unable to determine loaded assets.')
             return dict(), ''
 
-        return loaded_assets, type_per_ch[0]
+        return loaded_assets, type_per_ch
 
     def clear_all(self):
         """ Clears all loaded waveforms from the pulse generators RAM/workspace.
@@ -953,14 +955,6 @@ class AWGM819X(Base, PulserInterface):
         new_channels_state = current_channel_state.copy()
         for chnl in ch:
             new_channels_state[chnl] = ch[chnl]
-
-        # iterate digital channels and activate if corresponding analogue is on
-        for chnl in current_channel_state.copy():
-            if chnl.startswith('d_'):
-                if new_channels_state[self._digital_ch_corresponding_analogue_ch(chnl)]:
-                    new_channels_state[chnl] = True
-                else:
-                    new_channels_state[chnl] = False
 
         # check if the channels to set are part of the activation_config constraints
         constraints = self.get_constraints()
@@ -1771,7 +1765,7 @@ class AWGM819X(Base, PulserInterface):
             self.log.warn("Unknown assets mode: {}".format(mode))
             return 0
 
-        if raw_str == "0,0":
+        if raw_str.replace(" ","") == "0,0":   # awg response on 8195A without spaces
             return 0
         else:
             splitted = raw_str.rsplit(',')
@@ -1886,7 +1880,7 @@ class AWGM819X(Base, PulserInterface):
         elif 'd_ch' in chstr:
             # this is M8195A specific
             ch_num = int(chstr.rsplit('_ch', 1)[1]) + 2
-            if self._MODEL == 'M8195A':
+            if self._MODEL == 'M8190A':
                 self.log.warning("Shouldn't need to convert channel string {} for 8190A".format(chstr))
         else:
             raise ValueError("Unknown channel string: {}".format(chstr))
@@ -1910,8 +1904,10 @@ class AWGM8195A(AWGM819X):
     _modclass = 'awgm8195a'
     _modtype = 'hardware'
 
-    awg_mode = ConfigOption(name='awg_mode', default='FOUR', missing='warn')
+    awg_mode_cfg = ConfigOption(name='awg_mode', default='FOUR', missing='warn')
     sample_rate_div = ConfigOption(name='sample_rate_div', default=4, missing='warn')
+
+    _wave_mem_mode = 'awg_segments'
 
     _dac_resolution = 8  # fixed 8 bit
     # physical output channel mapping
@@ -2084,21 +2080,17 @@ class AWGM8195A(AWGM819X):
     def _set_awg_mode(self):
         # set only on init by config option, not during runtime
 
-        awg_mode = self.awg_mode
-        self.write(':INSTrument:DACMode {0}'.format())  # TODO grab this setting from config
+        awg_mode = self.awg_mode_cfg
+        self.write(':INSTrument:DACMode {0}'.format(awg_mode))
 
-        # set manual 1.5.5
-
-        if awg_mode == 'MARK':
-            raise NotImplementedError
-        elif awg_mode == 'SING':
-            raise NotImplementedError
-        elif awg_mode == 'DUAL':
-            raise NotImplementedError
-        elif awg_mode == 'FOUR':
+        # see manual 1.5.5
+        if awg_mode == 'MARK' or awg_mode == 'SING' or awg_mode == 'DUAL' or awg_mode == 'FOUR':
             self.write_all_ch(':TRAC{}:MMOD EXT')
         else:
             raise ValueError("Unknown mode: {}".format(awg_mode))
+
+        if self.awg_mode != awg_mode:
+            self.log.error("Setting awg mode failed, is still: {}".format(self.awg_mode))
 
     def _set_sample_rate_div(self):
         self.write(':INST:MEM:EXT:RDIV DIV{0}'.format(self.sample_rate_div))  # TODO dependent on DACMode
@@ -2155,7 +2147,7 @@ class AWGM8195A(AWGM819X):
         if ch ==[]:
 
             # because 0 = False and 1 = True
-            awg_mode = self.query(':INST:DACM?')
+            awg_mode = self.awg_mode
             self.log.debug('awg mode is {0}'.format(awg_mode))
             if awg_mode == 'MARK':
                 active_ch['a_ch1'] = bool(int(self.query(':OUTP1?')))
@@ -2270,6 +2262,9 @@ class AWGM8190A(AWGM819X):
 
     _modclass = 'awgm8190a'
     _modtype = 'hardware'
+
+    _dac_amp_mode = 'direct'    # see manual 1.2 'options'
+    _wave_mem_mode = 'pc_hdd'  # 'awg_segments'
 
     _dac_resolution = ConfigOption(name='dac_resolution_bits', default='14',
                                    missing='warn')  # 8190 supports 12 (speed) or 14 (precision)
@@ -2522,6 +2517,16 @@ class AWGM8190A(AWGM819X):
         # get lists of all analog channels
         analog_channels = self._get_all_analog_channels()
         digital_channels = self._get_all_digital_channels()
+        current_channel_state = self.get_active_channels()
+
+        # awg 8190: no own channels, digital channels belong to analogue ones
+        # iterate digital channels and activate if corresponding analogue is on
+        for chnl in current_channel_state.copy():
+            if chnl.startswith('d_'):
+                if new_channels_state[self._digital_ch_corresponding_analogue_ch(chnl)]:
+                    new_channels_state[chnl] = True
+                else:
+                    new_channels_state[chnl] = False
 
         # Also (de)activate the channels accordingly
         # awg8190a: digital channels belong to analogue ones

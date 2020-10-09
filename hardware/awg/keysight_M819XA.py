@@ -63,7 +63,7 @@ class AWGM819X(Base, PulserInterface):
         self._sequence_mode = False         # set in on_activate()
         self.current_loaded_asset = ''
         self.active_channel = dict()        # todo: save to expose public?
-        self._debug_check_all_commands = False       # for development purpose, might slow down
+        self._debug_check_all_commands = True       # for development purpose, might slow down
 
     def on_activate(self):
         """Initialisation performed during activation of the module.
@@ -145,6 +145,10 @@ class AWGM819X(Base, PulserInterface):
     def _get_digital_ch_cmd(self):
         pass
 
+    @abstractmethod
+    def _get_init_output_levels(self):
+        pass
+
     def _init_device(self):
         """ Run those methods during the initialization process."""
 
@@ -179,16 +183,11 @@ class AWGM819X(Base, PulserInterface):
 
         self._set_dac_amplifier_mode()
 
-        # unused channel (not in activation config) are ignored
-        ampl = {'a_ch1': constr.a_ch_amplitude.default, 'a_ch2': constr.a_ch_amplitude.default,
-                'a_ch3': constr.a_ch_amplitude.default, 'a_ch4': constr.a_ch_amplitude.default}
-        d_ampl_low = {'d_ch1': constr.d_ch_low.default, 'd_ch2': constr.d_ch_low.default,
-                      'd_ch3': constr.d_ch_low.default, 'd_ch4': constr.d_ch_low.default}
-        d_ampl_high = {'d_ch1': constr.d_ch_high.default, 'd_ch2': constr.d_ch_high.default,
-                       'd_ch3': constr.d_ch_high.default, 'd_ch4': constr.d_ch_high.default}
-
-        self.amplitude_list, self.offset_list = self.set_analog_level(amplitude=ampl)
-        self.markers_low, self.markers_high = self.set_digital_level(low=d_ampl_low, high=d_ampl_high)
+        init_levels = self._get_init_output_levels()
+        self.amplitude_list, self.offset_list = self.set_analog_level(amplitude=init_levels['a_ampl'],
+                                                                      offset=init_levels['a_offs'])
+        self.markers_low, self.markers_high = self.set_digital_level(low=init_levels['d_ampl_low'],
+                                                                     high=init_levels['d_ampl_high'])
         self.is_output_enabled = self._is_awg_running()
         self.use_sequencer = self.has_sequence_mode()
         self.active_channel = self.get_active_channels()
@@ -433,6 +432,7 @@ class AWGM819X(Base, PulserInterface):
                            'Make sure to call write_sequence() first.')
             return self.get_loaded_assets()
 
+        self.write_all_ch(':FUNC{}:MODE STS', all_by_one={'m8195a': True})  # activate the sequence mode
         """
         select the first segment in your sequence, before any dynamic sequence selection.
         """
@@ -440,6 +440,8 @@ class AWGM819X(Base, PulserInterface):
         self.write(":STAB2:SEQ:SEL 0")
         self.write(":STAB1:DYN ON")
         self.write(":STAB2:DYN ON")
+        # todo: for merging with master other seuence trigger mode might be required
+        self.set_trigger_mode('trig')  # for external dynamic control, different for other usecase
 
         return 0
 
@@ -476,7 +478,7 @@ class AWGM819X(Base, PulserInterface):
             return "gate"
 
         self.log.warning("Unexpected trigger mode found. Cont {}, Gate {}".format(
-                            cont, gate)
+                            cont, gate))
         return ""
 
     def get_dynamic_mode(self):
@@ -531,7 +533,7 @@ class AWGM819X(Base, PulserInterface):
 
                 type_per_ch.append('waveform')
                 seg_id_active = self.query(':TRAC{}:SEL?'.format(chnl_num))
-                asset_name = self.get_loaded_assets_name(chnl_num, mode='segment')[int(seg_id_active-1)]
+                asset_name = self.get_loaded_assets_name(chnl_num, mode='segment')[int(seg_id_active)-1]
 
             elif self.get_loaded_assets_num(chnl_num, mode='segment') >= 1 \
                 and self.get_loaded_assets_num(chnl_num, mode='sequence') == 1:
@@ -668,7 +670,7 @@ class AWGM819X(Base, PulserInterface):
         else:
             for chnl in amplitude:
                 if chnl in chnl_list:
-                    ch_num = int(chnl.rsplit('_ch', 1)[1])
+                    ch_num = self.chstr_2_chnum(chnl)
                     amp[chnl] = float(self.query(':VOLT{0:d}?'.format(ch_num)))
                 else:
                     self.log.warning('Get analog amplitude from channel "{0}" failed. '
@@ -677,11 +679,12 @@ class AWGM819X(Base, PulserInterface):
         # get voltage offsets
         if offset is None:
             for ch_num, chnl in enumerate(chnl_list):
+                ch_num = self.chstr_2_chnum(chnl)
                 off[chnl] = float(self.query(':VOLT{0:d}:OFFS?'.format(ch_num)))
         else:
             for chnl in offset:
                 if chnl in chnl_list:
-                    ch_num = int(chnl.rsplit('_ch', 1)[1])
+                    ch_num = self.chstr_2_chnum(chnl)
                     off[chnl] = float(self.query(':VOLT{0:d}:OFFS?'.format(ch_num)))
                 else:
                     self.log.warning('Get analog offset from channel "{0}" failed. '
@@ -715,7 +718,7 @@ class AWGM819X(Base, PulserInterface):
         # amplitude sanity check
         if amplitude is not None:
             for chnl in amplitude:
-                ch_num = int(chnl.rsplit('_ch', 1)[1])
+                ch_num = self.chstr_2_chnum(chnl)
                 if chnl not in analog_channels:
                     self.log.warning('Channel to set (a_ch{0}) not available in AWG.\nSetting '
                                      'analogue voltage for this channel ignored.'.format(ch_num))
@@ -735,7 +738,7 @@ class AWGM819X(Base, PulserInterface):
         # offset sanity check
         if offset is not None:
             for chnl in offset:
-                ch_num = int(chnl.rsplit('_ch', 1)[1])
+                ch_num = self.chstr_2_chnum(chnl)
                 if chnl not in analog_channels:
                     self.log.warning('Channel to set (a_ch{0}) not available in AWG.\nSetting '
                                      'offset voltage for this channel ignored.'.format(chnl))
@@ -754,14 +757,14 @@ class AWGM819X(Base, PulserInterface):
 
         if amplitude is not None:
             for chnl, amp in amplitude.items():
-                ch_num = int(chnl.rsplit('_ch', 1)[1])
+                ch_num = self.chstr_2_chnum(chnl)
                 self.write(':VOLT{0} {1:.4f}'.format(ch_num, amp))
                 while int(self.query('*OPC?')) != 1:
                     time.sleep(0.25)
 
         if offset is not None:
             for chnl, off in offset.items():
-                ch_num = int(chnl.rsplit('_ch', 1)[1])
+                ch_num = self.chstr_2_chnum(chnl)
                 self.write(':VOLT{0}:OFFS {1:.4f}'.format(ch_num, off))
                 while int(self.query('*OPC?')) != 1:
                     time.sleep(0.25)
@@ -1120,12 +1123,13 @@ class AWGM819X(Base, PulserInterface):
 
             elif self._wave_mem_mode == 'awg_segments':
                 # todo: avoid naming convention to write to specific segment
-                # todo: check if working for awg8190a
+                # todo: broken for awg8190a: segment is overwritten for 2nd channel
                 if name.split(',')[0] == name:
                     segment_id = 1
                 else:
                     segment_id = np.int(name.split(',')[0])
 
+                # todo replace with get_loaded_assets calls
                 # delete if the segment is already existing
                 loaded_segments = self.query(':TRAC:CAT?')
                 if str(segment_id) in loaded_segments.split(',')[::2]:
@@ -1527,8 +1531,9 @@ class AWGM819X(Base, PulserInterface):
             command = command.replace("}", "", 1)
             self.write(command.format(*args))
         else:
-            for i in range(0, self.n_ch):
-                self.write(command.format(i, *args))
+            for a_ch in self._get_all_analog_channels():
+                ch_num = self.chstr_2_chnum(a_ch)
+                self.write(command.format(ch_num, *args))
 
     def query_all_ch(self, command, *args, all_by_one=None):
         """
@@ -1558,8 +1563,9 @@ class AWGM819X(Base, PulserInterface):
             return self.query(command.format(*args))
         else:
             retlist = []
-            for i in range(0, self.n_ch):
-                retlist = self.query(command.format(i, *args))
+            for a_ch in self._get_all_analog_channels():
+                ch_num = self.chstr_2_chnum(a_ch)
+                retlist = self.query(command.format(ch_num, *args))
             collapsed_ret = np.unique(np.asarray(retlist))
             if collapsed_ret.size > 1:
                 self.log.error("Unexpected non-identical response on channels: {}".format(retlist))
@@ -1792,6 +1798,10 @@ class AWGM819X(Base, PulserInterface):
             return ids
 
     def get_loaded_assets_name(self, ch_num, mode='segment'):
+        """
+          Retrieves the names of all assets uploaded to the awg memory.
+          This is not == "loaded_asset" which is the waveform / segment marked active.
+        """
 
         n_assets = self.get_loaded_assets_num(ch_num, mode)
         names = []
@@ -1800,7 +1810,7 @@ class AWGM819X(Base, PulserInterface):
             if mode == 'segment':
                 names.append(self.query(':TRAC{:d}:NAME? {:d}'.format(ch_num, i+1)))
             elif mode == 'sequence':
-                self._get_loaded_seq_name(ch_num, i)
+                names.append(self._get_loaded_seq_name(ch_num, i))
             else:
                 self.log.warn("Unknown assets mode: {}".format(mode))
                 return 0
@@ -1869,6 +1879,19 @@ class AWGM819X(Base, PulserInterface):
     def sequence_set_start_segment(self, seqtable_id):
         # todo: need to implement? alernatively shuffle sequuence while generating
         pass
+
+    def chstr_2_chnum(self, chstr):
+        if 'a_ch' in chstr:
+            ch_num = int(chstr.rsplit('_ch', 1)[1])
+        elif 'd_ch' in chstr:
+            # this is M8195A specific
+            ch_num = int(chstr.rsplit('_ch', 1)[1]) + 2
+            if self._MODEL == 'M8195A':
+                self.log.warning("Shouldn't need to convert channel string {} for 8190A".format(chstr))
+        else:
+            raise ValueError("Unknown channel string: {}".format(chstr))
+
+        return ch_num
 
 class AWGM8195A(AWGM819X):
     """ A hardware module for the Keysight M8190A series for generating
@@ -2031,6 +2054,33 @@ class AWGM8195A(AWGM819X):
 
         return constraints
 
+    def _get_init_output_levels(self):
+
+        constr = self.get_constraints()
+
+        if self.awg_mode == 'MARK':
+
+            a_ampl = {'a_ch1': constr.a_ch_amplitude.default} # peak to peak voltage
+            d_ampl_low = {'d_ch1': constr.d_ch_low.default, 'd_ch2': constr.d_ch_low.default}
+            d_ampl_high = {'d_ch1': constr.d_ch_high.default, 'd_ch2': constr.d_ch_high.default}
+            a_offs = {}
+
+        elif self.awg_mode == 'FOUR':
+
+            a_ampl = {'a_ch1': constr.a_ch_amplitude.default, 'a_ch2': constr.a_ch_amplitude.default,
+                    'a_ch3': constr.a_ch_amplitude.default, 'a_ch4': constr.a_ch_amplitude.default}
+            a_offs = {'a_ch1': constr.a_ch_offset.default, 'a_ch2': constr.a_ch_offset.default_marker,
+                      'a_ch3': constr.a_ch_offset.default_marker, 'a_ch4': constr.a_ch_offset.default_marker}
+            d_ampl_low = {}
+            d_ampl_high = {}
+
+        else:
+            self.log.error('The chosen AWG ({0}) mode is not implemented yet!'.format(self.awg_mode))
+
+
+        return {'a_ampl': a_ampl, 'a_offs': a_offs,
+                'd_ampl_low': d_ampl_low, 'd_ampl_high': d_ampl_high}
+
     def _set_awg_mode(self):
         # set only on init by config option, not during runtime
 
@@ -2146,7 +2196,7 @@ class AWGM8195A(AWGM819X):
 
         # Also (de)activate the channels accordingly
         for a_ch in analog_channels:
-            ach_num = int(a_ch.rsplit('_ch', 1)[1])
+            ach_num = self.chstr_2_chnum(a_ch)
             # (de)activate the analog channel
             if new_channels_state[a_ch]:
                 self.write('OUTP{0:d} ON'.format(ach_num))
@@ -2154,7 +2204,7 @@ class AWGM8195A(AWGM819X):
                 self.write('OUTP{0:d} OFF'.format(ach_num))
 
         for d_ch in digital_channels:
-            dch_num = int(d_ch.rsplit('_ch', 1)[1])+2
+            dch_num = self.chstr_2_chnum(d_ch)
             # (de)activate the digital channel
             if new_channels_state[d_ch]:
                 self.write('OUTP{0:d} ON'.format(dch_num))
@@ -2366,6 +2416,20 @@ class AWGM8190A(AWGM819X):
 
         return constraints
 
+    def _get_init_output_levels(self):
+
+        constr = self.get_constraints()
+
+        a_ampl = {'a_ch1': constr.a_ch_amplitude.default, 'a_ch2': constr.a_ch_amplitude.default}
+        d_ampl_low = {'d_ch1': constr.d_ch_low.default, 'd_ch2': constr.d_ch_low.default,
+                      'd_ch3': constr.d_ch_low.default, 'd_ch4': constr.d_ch_low.default}
+        d_ampl_high = {'d_ch1': constr.d_ch_high.default, 'd_ch2': constr.d_ch_high.default,
+                       'd_ch3': constr.d_ch_high.default, 'd_ch4': constr.d_ch_high.default}
+        a_offs = {}
+
+        return {'a_ampl': a_ampl, 'a_offs': a_offs,
+                'd_ampl_low': d_ampl_low, 'd_ampl_high': d_ampl_high}
+
     def _set_dac_resolution(self):
         if self._dac_resolution == 12:
             self.write(':TRAC1:DWID WSP')
@@ -2377,7 +2441,7 @@ class AWGM8190A(AWGM819X):
             self.log.error("Unsupported DAC resolution: {}.".format(self._dac_resolution))
 
     def _set_dac_amplifier_mode(self):
-        # todo: implement choosing AMP
+        # todo: implement choosing amp mode
         if self._dac_amp_mode != 'direct':
             raise NotImplementedError("Non direct output '{}' not yet implemented."
                                       .format(self._dac_amp_mode))
@@ -2385,7 +2449,7 @@ class AWGM8190A(AWGM819X):
         self.write(':OUTP2:ROUT DAC')
 
     def _write_output_on(self):
-        self.write_all_ch("OUTP{} NORM ON")
+        self.write_all_ch("OUTP{}:NORM ON")
 
     def _compile_bin_samples(self, analog_samples, digital_samples, ch_num):
 
@@ -2462,13 +2526,12 @@ class AWGM8190A(AWGM819X):
         # Also (de)activate the channels accordingly
         # awg8190a: digital channels belong to analogue ones
         for a_ch in analog_channels:
-            ach_num = int(a_ch.rsplit('_ch', 1)[1])
+            ach_num = self.chstr_2_chnum(a_ch)
             # (de)activate the analog channel
             if new_channels_state[a_ch]:
                 self.write('OUTP{0:d}:NORM ON'.format(ach_num))
             else:
                 self.write('OUTP{0:d}:NORM OFF'.format(ach_num))
-
 
     def float_to_sample(self, val):
 
@@ -2501,7 +2564,6 @@ class AWGM8190A(AWGM819X):
         """
         seq_id = self.get_loaded_assets_id(ch_num, 'sequence')[idx]
         return self.query(':SEQ{:d}:NAME? {:d}'.format(ch_num, seq_id))
-
 
     def _get_sequence_control_bin(self, sequence_parameters, idx_step):
 

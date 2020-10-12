@@ -1166,12 +1166,12 @@ class AWGM819X(Base, PulserInterface):
                 self.log.debug("Waveform {} written to {}".format(name, filename))
 
             elif self._wave_mem_mode == 'awg_segments':
-                # todo: avoid naming convention to write to specific segment
                 # todo: broken for awg8190a: segment is overwritten for 2nd channel
 
                 if name in self.get_loaded_assets_name(ch_num):
-                    self.log.error("Wave {} not written as already on awg memory ch {}, rename.".format(name, ch_num))
-                    break
+                    seg_id_exist = self.asset_name_2_id(name, ch_num, mode='segment')
+                    self.write("TRAC{:d}:DEL {}".format(ch_num, seg_id_exist))
+                    self.log.debug("Deleting segment {} ch {} for existing wave {}".format(seg_id_exist, ch_num, name))
 
                 segment_id = to_segment_id
                 if name.split(',')[0] != name:

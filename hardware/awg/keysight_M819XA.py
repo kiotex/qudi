@@ -354,7 +354,7 @@ class AWGM819X(Base, PulserInterface):
 
         self.set_seq_mode('ARB')
 
-        self.log.debug("Load_waveform call with dict {}".format(load_dict))
+        self.log.debug("Load_waveform call with dict/list {}".format(load_dict))
 
         load_dict = self._load_list_2_dict(load_dict)
 
@@ -423,6 +423,8 @@ class AWGM819X(Base, PulserInterface):
             # todo: check required file naming. seems like segment number in filename
             # we should replace with internal book keeping here
 
+
+            # todo: awg8190: waveform is without channel extension!
             for chnl_num, waveform in load_dict.items():
                 waveform = load_dict[chnl_num]
                 name = waveform
@@ -431,7 +433,7 @@ class AWGM819X(Base, PulserInterface):
                 else:
                     segment_id = np.int(name.split(',')[0])
                     self.log.warning("Loading segments via name will deprecate.")
-                self.write(':TRAC:SEL {0}'.format(segment_id))
+                self.write(':TRAC{0}:SEL {1}'.format(chnl_num, segment_id))
 
 
         else:
@@ -1139,6 +1141,18 @@ class AWGM819X(Base, PulserInterface):
         """
         pass
 
+
+    def _name_with_ch(self, name, ch_num):
+        """
+        Prepares the final wavename with (M8190A) or without (M8195A) channel extension.
+        Eg. rabi -> rabi_ch1
+        """
+        return name + '_ch' + str(ch_num)
+
+    def _wavename_2_fname(self, wave_name):
+        # all names lowercase to avoid trouble
+        return str(wave_name + self.wave_file_extension).lower()
+
     def _write_wave_to_memory(self, name, analog_samples, digital_samples, active_analog, to_segment_id=1):
 
         waveforms = []
@@ -1146,7 +1160,9 @@ class AWGM819X(Base, PulserInterface):
         for channel_index, ch_str in enumerate(active_analog):
 
             ch_num = self.chstr_2_chnum(ch_str)
+            wave_name = self._name_with_ch(name, ch_num)
             self.log.debug('Max ampl, ch={0}: {1}'.format(ch_str, analog_samples[ch_str].max()))
+
             comb_samples = self._compile_bin_samples(analog_samples, digital_samples, ch_str)
 
             if self._wave_mem_mode == 'pc_hdd':
@@ -1155,7 +1171,7 @@ class AWGM819X(Base, PulserInterface):
                     self.log.warning("In pc_hdd memory mode, 'to_segment_id' has no effect."
                                      "Writing to hdd without setting segment.")
 
-                filename = name + '_ch' + str(ch_num) + '.bin'  # all names lowercase to avoid trouble
+                filename = self._wavename_2_fname(wave_name)
                 waveforms.append(filename)
 
                 if channel_index == 0:
@@ -1163,15 +1179,14 @@ class AWGM819X(Base, PulserInterface):
                     self.delete_waveform(filename.split("_ch")[0])
                 self.write_bin(':MMEM:DATA "{0}", '.format(filename), comb_samples)
 
-                self.log.debug("Waveform {} written to {}".format(name, filename))
+                self.log.debug("Waveform {} written to {}".format(wave_name, filename))
 
             elif self._wave_mem_mode == 'awg_segments':
-                # todo: broken for awg8190a: segment is overwritten for 2nd channel
 
-                if name in self.get_loaded_assets_name(ch_num):
-                    seg_id_exist = self.asset_name_2_id(name, ch_num, mode='segment')
+                if wave_name in self.get_loaded_assets_name(ch_num):
+                    seg_id_exist = self.asset_name_2_id(wave_name, ch_num, mode='segment')
                     self.write("TRAC{:d}:DEL {}".format(ch_num, seg_id_exist))
-                    self.log.debug("Deleting segment {} ch {} for existing wave {}".format(seg_id_exist, ch_num, name))
+                    self.log.debug("Deleting segment {} ch {} for existing wave {}".format(seg_id_exist, ch_num, wave_name))
 
                 segment_id = to_segment_id
                 if name.split(',')[0] != name:
@@ -1180,12 +1195,12 @@ class AWGM819X(Base, PulserInterface):
                 if to_segment_id == -1:
                     # to next free segment
                     segment_id = self.query('TRAC{0:d}:DEF:NEW? {1:d}'.format(ch_num, len(comb_samples)))
-                    segment_id_ch = segment_id + '_ch{:d}'.format(ch_num)
                     # only need the next free id, definition and writing is performed below again
                     # so delete defined segment again
                     self.write("TRAC{:d}:DEL {}".format(ch_num, segment_id))
 
-                self.log.debug("Writing wave {} to ch {} segment_id {}".format(name, ch_str, segment_id_ch))
+                segment_id_ch = segment_id + '_ch{:d}'.format(ch_num)
+                self.log.debug("Writing wave {} to ch {} segment_id {}".format(wave_name, ch_str, segment_id_ch))
 
                 # delete if the segment is already existing
                 loaded_segments_id = self.get_loaded_assets_id(ch_num)
@@ -1198,11 +1213,11 @@ class AWGM819X(Base, PulserInterface):
                 self.write(':TRAC{0}:DEF {1}, {2}, {3}'.format(int(ch_num), segment_id, len(comb_samples), 0))
 
                 # name the segment
-                self.write(':TRAC:NAME {0}, "{1}"'.format(segment_id, name))  # name the segment
+                self.write(':TRAC{0}:NAME {1}, "{2}"'.format(int(ch_num), segment_id, wave_name))  # name the segment
                 # upload
                 self.write_bin(':TRAC{0}:DATA {1}, {2},'.format(int(ch_num), segment_id, 0), comb_samples)
 
-                waveforms.append(name)
+                waveforms.append(wave_name)
                 self._flag_segment_table_req_update = True
 
             else:
@@ -1445,7 +1460,7 @@ class AWGM819X(Base, PulserInterface):
 
         for name in waveform_name:
             for waveform in avail_waveforms:
-                if fnmatch(waveform.lower(), name.lower()+'_ch?.bin'):
+                if fnmatch(waveform.lower(), name.lower()+'_ch?{}'.format(self.wave_file_extension)):
                     # delete case insensitive
                     self.write(':MMEM:DEL "{0}"'.format(waveform))
                     deleted_waveforms.append(waveform)
@@ -1471,7 +1486,7 @@ class AWGM819X(Base, PulserInterface):
 
         for name in sequence_name:
             for sequence in avail_sequences:
-                if fnmatch(sequence, name+'_ch?.bin'):
+                if fnmatch(sequence, name+'_ch?{}'.format(self.wave_file_extension)):
                     deleted_sequences.append(sequence)
 
         # todo: get_sequence_names return no extension
@@ -1957,7 +1972,7 @@ class AWGM819X(Base, PulserInterface):
         else:
             raise ValueError("Unknown channel string: {}".format(chstr))
 
-        return ch_num
+        return int(ch_num)
 
 class AWGM8195A(AWGM819X):
     """ A hardware module for the Keysight M8190A series for generating
@@ -1980,6 +1995,7 @@ class AWGM8195A(AWGM819X):
     sample_rate_div = ConfigOption(name='sample_rate_div', default=4, missing='warn')
 
     _wave_mem_mode = 'awg_segments'
+    wave_file_extension = '.bin8'
 
     _dac_resolution = 8  # fixed 8 bit
     # physical output channel mapping
@@ -2315,7 +2331,13 @@ class AWGM8195A(AWGM819X):
         if index + 1 == num_steps:
             control += 2 ** 30  # set end sequence
 
-        return control
+        return
+
+    def _name_with_ch(self, name, ch_num):
+        """
+        M8195A has only one wave file for all channels, no channel extension needed.
+        """
+        return name
 
 
 class AWGM8190A(AWGM819X):
@@ -2337,6 +2359,7 @@ class AWGM8190A(AWGM819X):
 
     _dac_amp_mode = 'direct'    # see manual 1.2 'options'
     _wave_mem_mode = 'pc_hdd'  # 'awg_segments'
+    wave_file_extension = '.bin'
 
     _dac_resolution = ConfigOption(name='dac_resolution_bits', default='14',
                                    missing='warn')  # 8190 supports 12 (speed) or 14 (precision)

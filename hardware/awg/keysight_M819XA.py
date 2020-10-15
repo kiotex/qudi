@@ -613,7 +613,7 @@ class AWGM819X(Base, PulserInterface):
             self.log.error('Unable to determine loaded assets.')
             return dict(), ''
 
-        return loaded_assets, type_per_ch
+        return loaded_assets, type_per_ch[0]   # interface requires same type for all ch
 
     def clear_all(self):
         """ Clears all loaded waveforms from the pulse generators RAM/workspace.

@@ -2052,6 +2052,10 @@ class AWGM8195A(AWGM819X):
 
         # The compatible file formats are hardware specific.
         constraints.waveform_format = ['bin8']
+        constraints.dac_resolution = {'min': 8, 'max': 8, 'step': 1, 'unit': 'bit'}
+
+        # The compatible file formats are hardware specific.
+        constraints.waveform_format = ['bin8']
 
         if self._MODEL == 'M8195A':
             constraints.sample_rate.min = 53.76e9 / self._sample_rate_div
@@ -2062,9 +2066,11 @@ class AWGM8195A(AWGM819X):
             self.log.error('The current AWG model has no valid sample rate '
                            'constraints')
 
-        # constraints.waveform_length.min = self.__min_waveform_length
-        # constraints.waveform_length.max = self.__max_waveform_length
-        constraints.waveform_length.step = 256
+        # manual 1.5.4: Depending on the Sample Rate Divider, the 256 sample wide output of the sequencer
+        # is divided by 1, 2 or 4.
+        constraints.waveform_length.step = 256 / self._sample_rate_div
+        constraints.waveform_length.min = 1
+        constraints.waveform_length.max = int(16e9)
         constraints.waveform_length.default = 1280
 
         # constraints.waveform_length.step = 1    #TODO step is 256 but the import function repeats the waveform until
@@ -2072,11 +2078,14 @@ class AWGM8195A(AWGM819X):
         #                                         # longer waveforms have to be uploaded.
         # constraints.waveform_length.default = 1 # min length is 1280 but this is also handled by the import
 
-        constraints.a_ch_amplitude.min = 0.075
-        constraints.a_ch_amplitude.max = 1.0  # corresponds to 1Vpp, 50Ohm terminated
-        constraints.a_ch_amplitude.step = 0.0002
-        constraints.a_ch_amplitude.default = 0.5
 
+        # analog channel
+        constraints.a_ch_amplitude.min = 0.075 #TODO Why?
+        constraints.a_ch_amplitude.max = 2
+        constraints.a_ch_amplitude.step = 0.0002 # not used anymore
+        constraints.a_ch_amplitude.default = 1
+
+        # digital channel
         constraints.d_ch_low.min = 0
         constraints.d_ch_low.max = 1
         constraints.d_ch_low.step = 0.0002
@@ -2087,13 +2096,19 @@ class AWGM8195A(AWGM819X):
         constraints.d_ch_high.step = 0.0002
         constraints.d_ch_high.default = 1
 
+        # offset
+        constraints.a_ch_offset.max = 1
+        constraints.a_ch_offset.min = 0
+        constraints.a_ch_offset.default = 0
+        constraints.a_ch_offset.default_marker = 0.5 # default value if analog channel is used as marker
+
         # constraints.sampled_file_length.min = 256
         # constraints.sampled_file_length.max = 2_000_000_000
         # constraints.sampled_file_length.step = 256
         # constraints.sampled_file_length.default = 256
 
         constraints.waveform_num.min = 1
-        constraints.waveform_num.max = 16000000
+        constraints.waveform_num.max = 16777215 #16M - 1, not quite clear from the manual
         constraints.waveform_num.default = 1
         # The sample memory can be split into a maximum of 16 M waveform segments
 
@@ -2195,7 +2210,6 @@ class AWGM8195A(AWGM819X):
         if marker_mode and ch_str == 'a_ch1':
             d_samples = self.bool_to_sample(digital_samples['d_ch1'], digital_samples['d_ch2'],
                                             int_type_str='int8')
-
             # the analog and digital samples are stored in the following format: a1, d1, a2, d2, a3, d3, ...
             comb_samples = np.zeros(2 * a_samples.size, dtype=np.int8)
             comb_samples[::2] = a_samples

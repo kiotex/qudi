@@ -1063,6 +1063,10 @@ class AWGM819X(Base, PulserInterface):
 
         return bit_dch_1 + bit_dch_2
 
+    def bool_to_sample_2(self, val_dch_1, val_dch_2, int_type_str='int8'):
+        # todo: debug only, delete before merging
+        return val_dch_1.astype(int_type_str) + 2 * val_dch_2.astype(int_type_str)
+
     def write_waveform(self, name, analog_samples, digital_samples, is_first_chunk, is_last_chunk,
                        total_number_of_samples):
         """
@@ -1147,11 +1151,18 @@ class AWGM819X(Base, PulserInterface):
         Prepares the final wavename with (M8190A) or without (M8195A) channel extension.
         Eg. rabi -> rabi_ch1
         """
-        return name + '_ch' + str(ch_num)
+        return name.lower() + '_ch' + str(ch_num)
 
     def _wavename_2_fname(self, wave_name):
         # all names lowercase to avoid trouble
         return str(wave_name + self.wave_file_extension).lower()
+
+    def _fname_2_wavename(self, fname, incl_ch_postfix=True):
+        # works for file name with (8190a) and without (8195a) _ch? postfix
+        if incl_ch_postfix:
+            return fname.split(".")[0]
+        else:
+            return fname.split("_ch")[0].split(".")[0]
 
     def _write_wave_to_memory(self, name, analog_samples, digital_samples, active_analog, to_segment_id=1):
 
@@ -1176,7 +1187,7 @@ class AWGM819X(Base, PulserInterface):
 
                 if channel_index == 0:
                     # deletes waveform, all channels
-                    self.delete_waveform(filename.split("_ch")[0])
+                    self.delete_waveform(self._fname_2_wavename(filename, incl_ch_postfix=False))
                 self.write_bin(':MMEM:DATA "{0}", '.format(filename), comb_samples)
 
                 self.log.debug("Waveform {} written to {}".format(wave_name, filename))
@@ -1460,7 +1471,8 @@ class AWGM819X(Base, PulserInterface):
 
         for name in waveform_name:
             for waveform in avail_waveforms:
-                if fnmatch(waveform.lower(), name.lower()+'_ch?{}'.format(self.wave_file_extension)):
+                name_ch = self._name_with_ch(name, '?')
+                if fnmatch(waveform.lower(), name_ch + "{}".format(self.wave_file_extension)):
                     # delete case insensitive
                     self.write(':MMEM:DEL "{0}"'.format(waveform))
                     deleted_waveforms.append(waveform)
@@ -1486,7 +1498,8 @@ class AWGM819X(Base, PulserInterface):
 
         for name in sequence_name:
             for sequence in avail_sequences:
-                if fnmatch(sequence, name+'_ch?{}'.format(self.wave_file_extension)):
+                name_ch = self._name_with_ch(name, '?')
+                if fnmatch(sequence, name_ch + '{}'.format(self.wave_file_extension)):
                     deleted_sequences.append(sequence)
 
         # todo: get_sequence_names return no extension
@@ -2203,20 +2216,27 @@ class AWGM8195A(AWGM819X):
 
     def _compile_bin_samples(self, analog_samples, digital_samples, ch_str):
 
-        marker_mode = self.marker_on
+        marker_on = self.marker_on
+        self.log.debug("Compiling samples for {} with marker on : {}".format(ch_str, marker_on))
 
         a_samples = self.float_to_sample(analog_samples[ch_str])
-
-        if marker_mode and ch_str == 'a_ch1':
+        # todo: broken on 8195a
+        if marker_on and ch_str == 'a_ch1':
             d_samples = self.bool_to_sample(digital_samples['d_ch1'], digital_samples['d_ch2'],
                                             int_type_str='int8')
+            #d_samples = digital_samples['d_ch1'].astype('int8') + 2 * digital_samples['d_ch2'].astype('int8')
+
             # the analog and digital samples are stored in the following format: a1, d1, a2, d2, a3, d3, ...
             comb_samples = np.zeros(2 * a_samples.size, dtype=np.int8)
-            comb_samples[::2] = a_samples
+            comb_samples[::2] =  a_samples
             comb_samples[1::2] = d_samples
 
         else:
             comb_samples = a_samples
+
+        self.log.debug("Comb samples (max={} @ {}) [:100] {}".format(np.max(comb_samples),
+                                                                     np.argmax(comb_samples),
+                                                                     comb_samples[:100]))
 
         return comb_samples
 

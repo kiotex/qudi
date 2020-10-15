@@ -1991,7 +1991,7 @@ class AWGM8195A(AWGM819X):
     _modclass = 'awgm8195a'
     _modtype = 'hardware'
 
-    awg_mode_cfg = ConfigOption(name='awg_mode', default='FOUR', missing='warn')
+    awg_mode_cfg = ConfigOption(name='awg_mode', default='MARK', missing='warn')
     sample_rate_div = ConfigOption(name='sample_rate_div', default=4, missing='warn')
 
     _wave_mem_mode = 'awg_segments'

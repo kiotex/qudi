@@ -2029,7 +2029,7 @@ class AWGM8195A(AWGM819X):
 
     @property
     def marker_on(self):
-        if self.awg_mode == 'MARK':
+        if self.awg_mode == 'MARK' or self.awg_mode == 'DCM':
             return True
         return False
 
@@ -2220,7 +2220,7 @@ class AWGM8195A(AWGM819X):
         self.log.debug("Compiling samples for {} with marker on : {}".format(ch_str, marker_on))
 
         a_samples = self.float_to_sample(analog_samples[ch_str])
-        # todo: broken on 8195a
+        # todo: broken on 8195a, seems like 16 bits are written
         if marker_on and ch_str == 'a_ch1':
             d_samples = self.bool_to_sample(digital_samples['d_ch1'], digital_samples['d_ch2'],
                                             int_type_str='int8')

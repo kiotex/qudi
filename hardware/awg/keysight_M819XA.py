@@ -400,7 +400,7 @@ class AWGM819X(Base, PulserInterface):
                 self.clear_all()
 
             for chnl_num, waveform in load_dict.items():
-                name = waveform.split('.bin', 1)[0]
+                name = waveform.split('.bin', 1)[0]  # name in front of .bin/.bin8
                 filepath = os.path.join(path, waveform)
 
                 data = self.query_bin(':MMEM:DATA? "{0}"'.format(filepath))
@@ -420,9 +420,6 @@ class AWGM819X(Base, PulserInterface):
                 self.log.warning("In awg_segments memory mode, 'to_nextfree_segment' has no effect."
                                  "Loading only marks active, segments need to be written before.")
             # m8195a: 1 name per segment, no individual name per channel
-            # todo: check required file naming. seems like segment number in filename
-            # we should replace with internal book keeping here
-
 
             # todo: awg8190: waveform is without channel extension!
             for chnl_num, waveform in load_dict.items():
@@ -1063,10 +1060,6 @@ class AWGM819X(Base, PulserInterface):
 
         return bit_dch_1 + bit_dch_2
 
-    def bool_to_sample_2(self, val_dch_1, val_dch_2, int_type_str='int8'):
-        # todo: debug only, delete before merging
-        return val_dch_1.astype(int_type_str) + 2 * val_dch_2.astype(int_type_str)
-
     def write_waveform(self, name, analog_samples, digital_samples, is_first_chunk, is_last_chunk,
                        total_number_of_samples):
         """
@@ -1588,7 +1581,7 @@ class AWGM819X(Base, PulserInterface):
                     @return int: error code (0:OK, -1:error)
         """
         self.awg.timeout = None
-        bytes_written, enum_status_code = self.awg.write_binary_values(command, datatype='h', is_big_endian=False,
+        bytes_written, enum_status_code = self.awg.write_binary_values(command, datatype=self.wave_transfer_datatype, is_big_endian=False,
                                                                        values=values)
         self.awg.timeout = self._awg_timeout * 1000
         return int(enum_status_code)
@@ -1675,7 +1668,7 @@ class AWGM819X(Base, PulserInterface):
 
     def query_bin(self, question):
 
-        return self.awg.query_binary_values(question, datatype='h', is_big_endian=False)
+        return self.awg.query_binary_values(question, datatype=self.wave_transfer_datatype, is_big_endian=False)
 
     def _is_awg_running(self):
         """
@@ -2009,6 +2002,7 @@ class AWGM8195A(AWGM819X):
 
     _wave_mem_mode = 'awg_segments'
     wave_file_extension = '.bin8'
+    wave_transfer_datatype = 'b'
 
     _dac_resolution = 8  # fixed 8 bit
     # physical output channel mapping
@@ -2220,12 +2214,10 @@ class AWGM8195A(AWGM819X):
         self.log.debug("Compiling samples for {} with marker on : {}".format(ch_str, marker_on))
 
         a_samples = self.float_to_sample(analog_samples[ch_str])
-        # todo: broken on 8195a
+
         if marker_on and ch_str == 'a_ch1':
             d_samples = self.bool_to_sample(digital_samples['d_ch1'], digital_samples['d_ch2'],
                                             int_type_str='int8')
-            #d_samples = digital_samples['d_ch1'].astype('int8') + 2 * digital_samples['d_ch2'].astype('int8')
-
             # the analog and digital samples are stored in the following format: a1, d1, a2, d2, a3, d3, ...
             comb_samples = np.zeros(2 * a_samples.size, dtype=np.int8)
             comb_samples[::2] =  a_samples
@@ -2394,6 +2386,7 @@ class AWGM8190A(AWGM819X):
     _dac_amp_mode = 'direct'    # see manual 1.2 'options'
     _wave_mem_mode = 'pc_hdd'  # 'awg_segments'
     wave_file_extension = '.bin'
+    wave_transfer_datatype = 'h'
 
     _dac_resolution = ConfigOption(name='dac_resolution_bits', default='14',
                                    missing='warn')  # 8190 supports 12 (speed) or 14 (precision)

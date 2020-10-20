@@ -2023,7 +2023,7 @@ class AWGM8195A(AWGM819X):
 
     @property
     def marker_on(self):
-        if self.awg_mode == 'MARK':
+        if self.awg_mode == 'MARK' or self.awg_mode == 'DCM':
             return True
         return False
 

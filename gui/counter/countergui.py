@@ -64,6 +64,7 @@ class CounterGui(GUIBase):
     def on_activate(self):
         """ Definition and initialisation of the GUI.
         """
+
         self._counting_logic = self.counterlogic1()
 
         #####################

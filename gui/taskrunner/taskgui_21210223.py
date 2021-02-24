@@ -54,7 +54,6 @@ class TaskGui(GUIBase):
         self.sigPauseTaskFromList.connect(self.logic.pauseTaskByIndex)
         self.sigStopTaskFromList.connect(self.logic.stopTaskByIndex)
         self.logic.model.dataChanged.connect(lambda i1, i2: self.setRunToolState(None, i1))
-        
         self.show()
 
     def show(self):

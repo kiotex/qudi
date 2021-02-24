@@ -31,10 +31,17 @@ import logic.generic_task as gt
 class TaskListTableModel(ListTableModel):
     """ An extension of the ListTableModel for keeping a task list in a TaskRunner.
     """
+    
+    sigDataChanged = QtCore.Signal()
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.headers = ['Task Name', 'Task State', 'Pre/Post actions', 'Pauses',
                         'Needs modules', 'is ok']
+        self.dataChanged.connect(
+                lambda x:
+                    self.sigDataChanged.emit()
+                )
 
     def data(self, index, role):
         """ Get data from model for a given cell. Data can have a role that
@@ -82,7 +89,7 @@ class TaskListTableModel(ListTableModel):
                         self.index(n, 1)
                         )
                 )
-
+    
 
 class TaskRunner(GenericLogic):
     """ This module keeps a collection of tasks that have varying preconditions,

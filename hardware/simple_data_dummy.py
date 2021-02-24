@@ -44,7 +44,8 @@ class SimpleDummy(Base, SimpleDataInterface):
 
     def getData(self):
         time.sleep(0.1)
-        return [int(np.random.poisson(5)), int(np.random.poisson(10)), int(np.random.poisson(30))]
+        #return [int(np.random.poisson(5)), int(np.random.poisson(10)), int(np.random.poisson(30))]
+        return int(np.random.poisson(5))
 
     def getChannels(self):
         time.sleep(0.1)

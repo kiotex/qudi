@@ -59,5 +59,3 @@ class Task(PrePostTask):
         else:
             self.log.error('No switching sequence configured for pre/post '
                     'task {}'.format(self.name))
-
-

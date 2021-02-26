@@ -23,7 +23,7 @@ from logic.generic_task import InterruptableTask
 import time
 
 class Task(InterruptableTask):
-    """ This task does a confocal focus optimisation.
+    """ This task does a confocal focus optimization.
     """
 
     def __init__(self, **kwargs):
@@ -63,4 +63,3 @@ class Task(InterruptableTask):
     def checkExtraPausePrerequisites(self):
         """ pausing a refocus is forbidden """
         return False
-

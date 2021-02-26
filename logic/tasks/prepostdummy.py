@@ -22,7 +22,7 @@ from logic.generic_task import PrePostTask
 import time
 
 class Task(PrePostTask):
-    """ Dummy thask that does nothing before and after a different task has run. """
+    """ Dummy task that does nothing before and after a different task has run. """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -40,4 +40,3 @@ class Task(PrePostTask):
         """
         time.sleep(1)
         print('post action of task {0}'.format(self.name))
-

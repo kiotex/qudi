@@ -54,7 +54,7 @@ class InterruptableTask(QtCore.QObject, Fysom, metaclass=TaskMetaclass):
            ^                      v                    v               |
            |-------------<--------|----------<---------|--------<-------
 
-        Each state has a transition state that allow for checks, synchronizatuion and for parts of the task
+        Each state has a transition state that allow for checks, synchronization and for parts of the task
         to influence its own execution via signals.
         This also allows the TaskRunner to be informed about what the task is doing and ensuring that a task
         is executed in the correct thread.
@@ -192,7 +192,7 @@ class InterruptableTask(QtCore.QObject, Fysom, metaclass=TaskMetaclass):
             self.sigDoFinish.emit()
 
     def _pause(self, e):
-        """ This does nothing, it is up to the TaskRunner to check that pausing is allowed and triger the next step.
+        """ This does nothing, it is up to the TaskRunner to check that pausing is allowed and trigger the next step.
         """
         pass
 
@@ -284,7 +284,7 @@ class InterruptableTask(QtCore.QObject, Fysom, metaclass=TaskMetaclass):
             return False
 
     def checkExtraPausePrerequisites(self):
-        """ If yout task has prerequisites for pausing, overwrite this function when subclassing and put the check here.
+        """ If your task has prerequisites for pausing, overwrite this function when subclassing and put the check here.
 
           @return bool: return True if task can be paused right now, False otherwise
         """
@@ -373,7 +373,7 @@ class PrePostTask(QtCore.QObject, Fysom, metaclass=TaskMetaclass):
         Returns a logger object
         """
         return logging.getLogger("{0}.{1}".format(
-            self.__module__,self.__class__.__name__))
+            self.__module__, self.__class__.__name__))
 
     def onchangestate(self, e):
         """ Fysom callback for all state transitions.

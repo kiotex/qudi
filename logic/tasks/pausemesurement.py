@@ -28,29 +28,36 @@ class Task(PrePostTask):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        print('Task {0} added!'.format(self.name))
+        print(f'Task {self.name} added!')
         #print('config: ', self.config)
 
-        self.pausing_measurement = getattr(self.ref['measurement_logic'], self.config['pausing_method'])
-        self.resumeing_measurement = getattr(self.ref['measurement_logic'], self.config['resumeing_method'])
+        self.logic = self.ref['measurement_logic']
+        self.pausing_measurement = getattr(self.logic, self.config['pausing_method'])
+        self.resumeing_measurement = getattr(self.logic, self.config['resumeing_method'])
 
-        self._measurement_was_paused = False
+        self._paused = False
+
+    def is_paused(self):
+        if self.config['use_is_paused_method']:
+            return self.logic.is_paused
+        else:
+            return self.logic.module_state.isstate('idle')
 
     def preExecute(self):
         """ Pausing measurement if it's running.
         """
-        if self.ref['measurement_logic'].module_state.isstate('locked'):
+        if self.logic.module_state.isstate('locked'):
             self.pausing_measurement()
-            self._measurement_was_paused = True
-
-        while self._measurement_was_paused and self.ref['measurement_logic'].module_state() != 'idle':
-            time.sleep(0.1)
+            self._paused = True
             print("pre", self.name)
+
+        while self._paused and not self.is_paused():
+            time.sleep(0.1)
 
     def postExecute(self):
         """ Resuming measurement if it was paused.
         """
-        if self._measurement_was_paused:
-            self._measurement_was_paused = False
+        if self._paused:
+            self._paused = False
             self.resumeing_measurement()
             print("post", self.name)

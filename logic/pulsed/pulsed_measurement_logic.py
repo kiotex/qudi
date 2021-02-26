@@ -517,6 +517,10 @@ class PulsedMeasurementLogic(GenericLogic):
     # Measurement control methods and properties
     ############################################################################
     @property
+    def is_paused(self):
+        return self.__is_paused
+
+    @property
     def measurement_settings(self):
         settings_dict = dict()
         settings_dict['invoke_settings'] = bool(self._invoke_settings_from_sequence)

@@ -399,7 +399,7 @@ class TaskRunner(GenericLogic):
 
         @return bool: whether resuming was successful
         """
-        for ptask in task['pausetasks']:
+        for ptask in reversed(task['pausetasks']):
             # print(ptask)
             try:
                 for t in self.model.storage:
@@ -435,7 +435,7 @@ class TaskRunner(GenericLogic):
 
         @return bool: whether post actions were successful
         """
-        for pptask in task['preposttasks']:
+        for pptask in reversed(task['preposttasks']):
             # print(pptask)
             try:
                 for t in self.model.storage:

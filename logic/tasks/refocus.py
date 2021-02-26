@@ -21,6 +21,7 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 
 from logic.generic_task import InterruptableTask
 import time
+from qtpy import QtCore
 
 class Task(InterruptableTask):
     """ This task does a confocal focus optimization.
@@ -30,11 +31,23 @@ class Task(InterruptableTask):
         super().__init__(**kwargs)
         print('Task {0} added!'.format(self.name))
 
+        self.initial_pos_updated = False
+
+        # Connect callback for a finished refocus
+        self.ref['optimizer'].sigRefocusFinished.connect(
+            self._optimization_callback, QtCore.Qt.QueuedConnection)
+
+    def __del__(self):
+        # Disconnect signals
+        self.ref['optimizer'].sigRefocusFinished.disconnect()
+        super().__del__()
+
     def startTask(self):
         """ Get position from scanning device and do the refocus """
-        pos = self.ref['optimizer']._scanning_device.get_scanner_position()
-        self.ref['optimizer'].start_refocus(pos, 'task')
-        # self.ref['optimizer'].start_refocus(caller_tag='task')
+        if not self.initial_pos_updated:
+            self.initial_pos = self.ref['optimizer']._scanning_device.get_scanner_position()
+            self.caller_tag = 'task'
+        self.ref['optimizer'].start_refocus(self.initial_pos, self.caller_tag)
 
     def runTaskStep(self):
         """ Wait for refocus to finish. """
@@ -51,7 +64,7 @@ class Task(InterruptableTask):
 
     def cleanupTask(self):
         """ nothing to clean up, optimizer can do that by itself """
-        pass
+        self.initial_pos_updated = False
 
     def checkExtraStartPrerequisites(self):
         """ Check whether anything we need is locked. """
@@ -64,3 +77,18 @@ class Task(InterruptableTask):
     def checkExtraPausePrerequisites(self):
         """ pausing a refocus is forbidden """
         return False
+
+
+    def _optimization_callback(self, caller_tag, optimal_pos):
+        """
+        Callback function for a finished position optimisation.
+
+        @param caller_tag:
+        @param optimal_pos:
+        """
+        self.caller_tag = caller_tag
+        self.optimal_pos = optimal_pos
+
+    @property
+    def refocus_XY_size(self):
+        return self.ref['optimizer'].refocus_XY_size

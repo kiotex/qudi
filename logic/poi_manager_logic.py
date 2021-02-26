@@ -28,6 +28,7 @@ import time
 from collections import OrderedDict
 from core.connector import Connector
 from core.statusvariable import StatusVar
+from core.configoption import ConfigOption
 from datetime import datetime
 from logic.generic_logic import GenericLogic
 from qtpy import QtCore
@@ -356,9 +357,11 @@ class PoiManagerLogic(GenericLogic):
     """
 
     # declare connectors
-    optimiserlogic = Connector(interface='OptimizerLogic')
+    taskrunner = Connector(interface='TaskRunner')
     scannerlogic = Connector(interface='ConfocalLogic')
     savelogic = Connector(interface='SaveLogic')
+
+    _refocus_task_name = ConfigOption(name='refocus_task', default='scannerLocationRefocus')
 
     # status vars
     _roi = StatusVar(default=dict())  # Notice constructor and representer further below
@@ -394,15 +397,18 @@ class PoiManagerLogic(GenericLogic):
         return
 
     def on_activate(self):
-        """ Initialisation performed during activation of the module.
+        """ Initialization performed during activation of the module.
         """
         self.__timer = QtCore.QTimer()
         self.__timer.setSingleShot(False)
         self._last_refocus = 0
         self._periodic_refocus_poi = None
 
+        self.optimisertask_dict = self.taskrunner().getTaskByName(self._refocus_task_name)
+        self.optimisertask = self.optimisertask_dict['object']
+
         # Connect callback for a finished refocus
-        self.optimiserlogic().sigRefocusFinished.connect(
+        self.optimisertask.sigFinished.connect(
             self._optimisation_callback, QtCore.Qt.QueuedConnection)
         # Connect internal start/stop signals to decouple QTimer from other threads
         self.__sigStartPeriodicRefocus.connect(
@@ -429,7 +435,7 @@ class PoiManagerLogic(GenericLogic):
         self.stop_periodic_refocus()
 
         # Disconnect signals
-        self.optimiserlogic().sigRefocusFinished.disconnect()
+        self.optimisertask.sigFinished.disconnect()
         self.__sigStartPeriodicRefocus.disconnect()
         self.__sigStopPeriodicRefocus.disconnect()
         return
@@ -440,7 +446,7 @@ class PoiManagerLogic(GenericLogic):
 
     @property
     def optimise_xy_size(self):
-        return float(self.optimiserlogic().refocus_XY_size)
+        return float(self.optimisertask.refocus_XY_size)
 
     @property
     def active_poi(self):
@@ -945,7 +951,7 @@ class PoiManagerLogic(GenericLogic):
             if self.__timer.isActive():
                 remaining_time = self.time_until_refocus
                 self.sigRefocusTimerUpdated.emit(True, self.refocus_period, remaining_time)
-                if remaining_time <= 0 and self.optimiserlogic().module_state() == 'idle':
+                if remaining_time <= 0 and self.optimisertask.is_state('stopped'):
                     self.optimise_poi_position(self._periodic_refocus_poi)
                     self._last_refocus = time.time()
         return
@@ -953,10 +959,10 @@ class PoiManagerLogic(GenericLogic):
     @QtCore.Slot()
     def optimise_poi_position(self, name=None, update_roi_position=True):
         """
-        Triggers the optimisation procedure for the given poi using the optimiserlogic.
+        Triggers the optimization procedure for the given poi using the optimisertask.
         The difference between old and new position can be used to update the ROI position.
         This function will return immediately. The function "_optimisation_callback" will handle
-        the aftermath of the optimisation.
+        the aftermath of the optimization.
 
         @param str name: Name of the POI for which to optimise the position.
         @param bool update_roi_position: Flag indicating if the ROI should be shifted accordingly.
@@ -974,24 +980,28 @@ class PoiManagerLogic(GenericLogic):
         else:
             tag = 'poimanager_{0}'.format(name)
 
-        if self.optimiserlogic().module_state() == 'idle':
-            self.optimiserlogic().start_refocus(initial_pos=self.get_poi_position(name),
-                                                caller_tag=tag)
+        if self.optimisertask.is_state('stopped'):
+            self.optimisertask.initial_pos_updated = True
+            self.optimisertask.initial_pos = self.get_poi_position(name)
+            self.optimisertask.caller_tag = tag
+
+            self.taskrunner().startTask(self.optimisertask_dict)
+
             self.sigRefocusStateUpdated.emit(True)
         else:
             self.log.warning('Unable to start POI refocus procedure. '
                              'OptimizerLogic module is still locked.')
         return
 
-    def _optimisation_callback(self, caller_tag, optimal_pos):
+    def _optimisation_callback(self):
         """
         Callback function for a finished position optimisation.
-        If desired the relative shift of the optimised POI can be used to update the ROI position.
-        The scanner is moved to the optimised POI if desired.
-
-        @param caller_tag:
-        @param optimal_pos:
+        If desired the relative shift of the optimized POI can be used to update the ROI position.
+        The scanner is moved to the optimized POI if desired.
         """
+        caller_tag = self.optimisertask.caller_tag
+        optimal_pos = self.optimisertask.optimal_pos
+
         # If the refocus was initiated by poimanager, update POI and ROI position
         if caller_tag.startswith('poimanager_') or caller_tag.startswith('poimanagermoveroi_'):
             shift_roi = caller_tag.startswith('poimanagermoveroi_')

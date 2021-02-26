@@ -51,10 +51,11 @@ class Task(InterruptableTask):
 
     def cleanupTask(self):
         """ nothing to clean up, optimizer can do that by itself """
+        pass
 
     def checkExtraStartPrerequisites(self):
         """ Check whether anything we need is locked. """
-        print('things needed for task to start')
+        self.log.info(f'Refocus {self.name}')
         return (
             not self.ref['optimizer']._scanning_device.module_state.isstate('locked')
             and not self.ref['optimizer'].module_state.isstate('locked')

@@ -49,7 +49,7 @@ class Task(PrePostTask):
         if self.logic.module_state.isstate('locked'):
             self.pausing_measurement()
             self._paused = True
-            print("pre", self.name)
+            self.log.info(f'Pause {self.name}')
 
         while self._paused and not self.is_paused():
             time.sleep(0.1)
@@ -60,4 +60,4 @@ class Task(PrePostTask):
         if self._paused:
             self._paused = False
             self.resumeing_measurement()
-            print("post", self.name)
+            self.log.info(f'Resume {self.name}')

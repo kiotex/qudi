@@ -354,14 +354,6 @@ def get_si_norm(entry):
     norm = 10 ** power
 
     return entry / norm, norm
-<<<<<<< HEAD
-=======
-
-
-def is_number(test_value):
-    """ Check whether passed value is a number
-
-    @return: bool, True if the passed value is a number, otherwise false.
     """
     return is_integer(test_value) or is_float(test_value) or is_complex(test_value)
 
@@ -552,4 +544,3 @@ def compute_ft(x_val, y_val, zeropad_num=0, window='none', base_corr=True,
     fft_x = np.fft.fftfreq(len(zeropad_arr), d=x_spacing)
 
     return abs(fft_x[:middle]), fft_y[:middle]
->>>>>>> 29913b8f0f065e7f617adaf612521092f9db0288

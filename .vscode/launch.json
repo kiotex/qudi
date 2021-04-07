@@ -1,0 +1,88 @@
+{
+    // IntelliSense を使用して利用可能な属性を学べます。
+    // 既存の属性の説明をホバーして表示します。
+    // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "PATH": "${workspaceRoot};${env:PATH}",
+                "PYTHONPATH": "${workspaceRoot};${env:PYTHONPATH}"
+            },
+            "justMyCode": false,
+            "debugOptions": [
+                "WaitOnAbnormalExit",
+                "WaitOnNormalExit",
+                "RedirectOuput"
+            ]
+        },
+
+
+        {
+            "name": "Qudi",
+            "type": "python",
+            "pythonArgs": [],
+            "request": "launch",
+            "module": "core",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "PATH": "${workspaceRoot};${env:PATH}",
+                "PYTHONPATH": "${workspaceRoot};${env:PYTHONPATH}"
+            },
+            "justMyCode": false,
+            "debugOptions": [
+                "WaitOnAbnormalExit",
+                "WaitOnNormalExit",
+                "RedirectOuput"
+            ]
+        },
+
+        {
+            "name": "Python: Attach",
+            "type": "python",
+            "request": "attach",
+            "port": 5678,
+            "host": "localhost",
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "."
+                }
+            ],
+        },
+
+        {
+            "name": "Python: Attach using Process Id",
+            "type": "python",
+            "request": "attach",
+            "processId": "${command:pickProcess}",
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "${workspaceFolder}"
+                }
+            ]
+        },
+
+
+        {
+            "name": "Qudi debug",
+            "type": "python",
+            "request": "launch",
+            "program": "start.py",                 // appの代わりにコレ
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+            },
+        },
+    ]
+}

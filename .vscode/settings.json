@@ -3,4 +3,19 @@
     "files.autoSaveDelay": 1000,
 
     "python.linting.lintOnSave": true,
+
+    "python.analysis.extraPaths": [
+        "${workspaceRoot}"
+    ],
+    "python.autoComplete.extraPaths": [
+        "${workspaceRoot}"
+    ],
+    "terminal.integrated.env.windows": {
+        "PATH": "${workspaceRoot};${env:PATH}",
+        "PYTHONPATH": "${workspaceRoot};${env:PYTHONPATH}"
+    },
+    "jupyter.jupyterServerType": "local",
+    "jupyter.jupyterCommandLineArguments": [
+        "--generate-config"
+    ]
 }

@@ -267,8 +267,8 @@ class ManagerGui(GUIBase):
             @param dict entry: Log entry
         """
         self._mw.logwidget.addEntry(entry)
-        #if entry['level'] == 'error' or entry['level'] == 'critical':
-        if entry['level'] == 'error' or entry['level'] == 'critical' or entry['level'] == 'warning':
+        if entry['level'] == 'error' or entry['level'] == 'critical':
+        #if entry['level'] == 'error' or entry['level'] == 'critical' or entry['level'] == 'warning':
             self.errorDialog.show(entry)
 
     def startIPython(self):
@@ -621,7 +621,7 @@ class ModuleListItem(QtWidgets.QFrame):
         """ Send signal to load and activate this module.
         """
         self.sigLoadThis.emit(self.base, self.name)
-        
+
         # Instant return to checked to prevent visual lag before checkModuleState completes
         self.loadButton.setChecked(True)
 

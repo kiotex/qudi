@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
@@ -14,7 +15,7 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item column="0" row="0">
+    <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -30,7 +31,7 @@
         <string>GUI</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout">
-        <item column="0" row="1">
+        <item row="1" column="0">
          <widget class="QScrollArea" name="scrollArea">
           <property name="widgetResizable">
            <bool>true</bool>
@@ -54,7 +55,7 @@
         <string>Logic</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout">
-        <item column="0" row="0">
+        <item row="0" column="0">
          <widget class="QScrollArea" name="scrollArea">
           <property name="widgetResizable">
            <bool>true</bool>
@@ -78,7 +79,7 @@
         <string>Hardware</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout">
-        <item column="0" row="0">
+        <item row="0" column="0">
          <widget class="QScrollArea" name="scrollArea">
           <property name="widgetResizable">
            <bool>true</bool>
@@ -218,7 +219,7 @@
    </attribute>
    <widget class="ThreadWidget" name="threadWidget" />
   </widget>
-  
+
   <widget class="QToolBar" name="configToolBar">
    <property name="windowTitle">
     <string>toolBar</string>
@@ -232,11 +233,11 @@
    <addaction name="actionLoad_configuration" />
    <addaction name="actionSave_configuration" />
    <addaction name="actionReload_current_configuration" />
-   
+
    <addaction name="actionQuit" />
-   
+
   </widget>
-  
+
   <widget class="QToolBar" name="moduleToolBar">
    <property name="windowTitle">
     <string>toolBar</string>
@@ -270,8 +271,7 @@
   <action name="action_Load_all_modules">
    <property name="icon">
     <iconset theme="media-playback-start">
-     <normaloff />
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string> Load &amp;all modules</string>
@@ -280,8 +280,7 @@
   <action name="actionStart_all_modules">
    <property name="icon">
     <iconset theme="media-playback-start">
-     <normaloff />
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Start all modules</string>
@@ -311,8 +310,7 @@
    </property>
    <property name="icon">
     <iconset>
-     <normaloff />
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>&amp;Log</string>
@@ -369,8 +367,7 @@
   <action name="actionExport_log_as_HTML">
    <property name="icon">
     <iconset theme="document-save-as">
-     <normaloff />
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>&amp;Export log as HTML</string>

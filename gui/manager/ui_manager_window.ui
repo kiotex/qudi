@@ -218,6 +218,7 @@
    </attribute>
    <widget class="ThreadWidget" name="threadWidget" />
   </widget>
+  
   <widget class="QToolBar" name="configToolBar">
    <property name="windowTitle">
     <string>toolBar</string>
@@ -231,7 +232,11 @@
    <addaction name="actionLoad_configuration" />
    <addaction name="actionSave_configuration" />
    <addaction name="actionReload_current_configuration" />
+   
+   <addaction name="actionQuit" />
+   
   </widget>
+  
   <widget class="QToolBar" name="moduleToolBar">
    <property name="windowTitle">
     <string>toolBar</string>

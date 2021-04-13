@@ -32,9 +32,11 @@ from interface.slow_counter_interface import SlowCounterConstraints
 from interface.slow_counter_interface import CountingMode
 from interface.odmr_counter_interface import ODMRCounterInterface
 from interface.confocal_scanner_interface import ConfocalScannerInterface
+from interface.odmr_clock_interface import ODMRClockInterface
 
 
-class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterInterface):
+class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInterface, ODMRCounterInterface,
+                                 ODMRClockInterface):
     """ A National Instruments device that can count and control microvave generators.
 
     !!!!!! NI USB 63XX, NI PCIe 63XX and NI PXIe 63XX DEVICES ONLY !!!!!!
@@ -1448,12 +1450,23 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
 
         @return int: error code (0:OK, -1:error)
         """
+        try:
+            self.set_up_clock(
+                clock_frequency=clock_frequency,
+                clock_channel=clock_channel,
+                scanner=False,
+                idle=False)
 
-        return self.set_up_clock(
-            clock_frequency=clock_frequency,
-            clock_channel=clock_channel,
-            scanner=True,
-            idle=False)
+            # connect the clock to the trigger channel to give triggers for the
+            # microwave
+            daq.DAQmxConnectTerms(
+                self._clock_channel + 'InternalOutput',
+                self._odmr_trigger_channel,
+                daq.DAQmx_Val_DoNotInvertPolarity)
+            return 0
+        except:
+            self.log.exception('Error while setting up the clock of ODMR scan.')
+            return -1
 
     def set_up_odmr(self, counter_channel=None, photon_source=None,
                     clock_channel=None, odmr_trigger_channel=None):
@@ -1923,7 +1936,7 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
 
         @return int: error code (0:OK, -1:error)
         """
-        return self.close_clock(scanner=True)
+        return self.close_clock(scanner=False)
 
     # ================== End ODMRCounterInterface Commands ====================
 

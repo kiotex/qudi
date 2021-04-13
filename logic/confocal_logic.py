@@ -259,7 +259,7 @@ class ConfocalLogic(GenericLogic):
 
     # status vars
     _clock_frequency = StatusVar('clock_frequency', 500)
-    return_slowness = StatusVar(default=50)
+    return_slowness = StatusVar(default=2)
     max_history_length = StatusVar(default=10)
 
     # signals
@@ -349,6 +349,9 @@ class ConfocalLogic(GenericLogic):
 
         self._change_position('activation')
 
+    def get_scanner_position(self):
+        self._scanning_device.get_scanner_position()
+
     def on_deactivate(self):
         """ Reverse steps of activation
 
@@ -389,7 +392,7 @@ class ConfocalLogic(GenericLogic):
         else:
             return 0
 
-    def start_scanning(self, zscan = False, tag='logic'):
+    def start_scanning(self, zscan=False, tag='logic'):
         """Starts scanning
 
         @param bool zscan: zscan if true, xyscan if false
@@ -406,7 +409,12 @@ class ConfocalLogic(GenericLogic):
         else:
             self._xyscan_continuable = True
 
+        self._scanning_device.scanner_set_position(2e-9, 2e-9)
+        print("Set scanner pos")
+
         self.signal_start_scanning.emit(tag)
+        self.signal_scan_lines_next.emit()
+
         return 0
 
     def continue_scanning(self,zscan,tag='logic'):
@@ -572,6 +580,7 @@ class ConfocalLogic(GenericLogic):
         self.module_state.lock()
 
         self._scanning_device.module_state.lock()
+
         if self.initialize_image() < 0:
             self._scanning_device.module_state.unlock()
             self.module_state.unlock()
@@ -595,7 +604,7 @@ class ConfocalLogic(GenericLogic):
             self.set_position('scanner')
             return -1
 
-        self.signal_scan_lines_next.emit()
+
         return 0
 
     def continue_scanner(self):
@@ -689,6 +698,8 @@ class ConfocalLogic(GenericLogic):
         for i, ch in enumerate(self.get_scanner_axes()):
             pos_dict[ch_array[i]] = pos_array[i]
 
+        #print(pos_dict)
+
         self._scanning_device.scanner_set_position(**pos_dict)
         return 0
 
@@ -756,18 +767,25 @@ class ConfocalLogic(GenericLogic):
                     start_line = np.vstack(
                         [lsx, lsy, lsz, np.ones(lsx.shape) * self._current_a])
                 # move to the start position of the scan, counts are thrown away
+
+
                 start_line_counts = self._scanning_device.scan_line(start_line)
+                print("Going to create start line counts")
+
                 if np.any(start_line_counts == -1):
+                    print("stop was requested to create start line counts")
                     self.stopRequested = True
                     self.signal_scan_lines_next.emit()
                     return
 
             # adjust z of line in image to current z before building the line
+
             if not self._zscan:
                 z_shape = image[self._scan_counter, :, 2].shape
                 image[self._scan_counter, :, 2] = self._current_z * np.ones(z_shape)
 
             # make a line in the scan, _scan_counter says which one it is
+            print("scan counter", self._scan_counter)
             lsx = image[self._scan_counter, :, 0]
             lsy = image[self._scan_counter, :, 1]
             lsz = image[self._scan_counter, :, 2]

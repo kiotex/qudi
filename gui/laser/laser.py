@@ -71,6 +71,8 @@ class LaserGUI(GUIBase):
 
     sigLaser = QtCore.Signal(bool)
     sigShutter = QtCore.Signal(bool)
+    sigExternal = QtCore.Signal(bool)
+
     sigPower = QtCore.Signal(float)
     sigCurrent = QtCore.Signal(float)
     sigCtrlMode = QtCore.Signal(ControlMode)
@@ -98,7 +100,7 @@ class LaserGUI(GUIBase):
         self._mw.pwContainer.layout().addWidget(self._mw.plotWidget)
 
         plot1 = self._mw.plotWidget.getPlotItem()
-        plot1.setLabel('left', 'power', units='W', color=palette.c1.name())
+        plot1.setLabel('left', 'Power', units='W', color=palette.c1.name())
         plot1.setLabel('bottom', 'Time', units=None)
         plot1.setLabel('right', 'Temperature', units='°C', color=palette.c3.name())
 
@@ -130,8 +132,10 @@ class LaserGUI(GUIBase):
         self.updateButtonsEnabled()
         self._mw.laserButton.clicked.connect(self.changeLaserState)
         self._mw.shutterButton.clicked.connect(self.changeShutterState)
+        self._mw.externalButton.clicked.connect(self.changeExternalState)
         self.sigLaser.connect(self._laser_logic.set_laser_state)
         self.sigShutter.connect(self._laser_logic.set_shutter_state)
+        self.sigExternal.connect(self._laser_logic.set_external_state)
         self.sigCurrent.connect(self._laser_logic.set_current)
         self.sigPower.connect(self._laser_logic.set_power)
         self.sigCtrlMode.connect(self._laser_logic.set_control_mode)
@@ -186,6 +190,14 @@ class LaserGUI(GUIBase):
         self.sigLaser.emit(on)
 
     @QtCore.Slot(bool)
+    def changeExternalState(self, on):
+        """ Disable laser external button and give logic signal.
+            Logic reaction to that signal will enable the button again.
+        """
+        self._mw.externalButton.setEnabled(False)
+        self.sigExternal.emit(on)
+
+    @QtCore.Slot(bool)
     def changeShutterState(self, on):
         """ Disable laser shutter button and give logic signal.
             Logic reaction to that signal will enable the button again.
@@ -222,7 +234,7 @@ class LaserGUI(GUIBase):
         """ Logic told us to update our button states, so set the buttons accordingly. """
         self._mw.laserButton.setEnabled(self._laser_logic.laser_can_turn_on)
         if self._laser_logic.laser_state == LaserState.ON:
-            self._mw.laserButton.setText('Laser: ON')
+            self._mw.laserButton.setText('Emission: ON')
             self._mw.laserButton.setChecked(True)
             self._mw.laserButton.setStyleSheet('')
         elif self._laser_logic.laser_state == LaserState.OFF:
@@ -243,6 +255,17 @@ class LaserGUI(GUIBase):
         else:
             self._mw.shutterButton.setText('Shutter: ?')
 
+        self._mw.externalButton.setEnabled(self._laser_logic.can_turn_on_external)
+        if self._laser_logic.laser_external:
+            self._mw.externalButton.setText('External: ON')
+            self._mw.externalButton.setChecked(True)
+            self._mw.externalButton.setStyleSheet('')
+        elif not self._laser_logic.laser_external:
+            self._mw.externalButton.setText('External: OFF')
+            self._mw.externalButton.setChecked(False)
+        else:
+            self._mw.externalButton.setText('External: ?')
+
         self._mw.currentRadioButton.setEnabled(self._laser_logic.laser_can_current)
         self._mw.powerRadioButton.setEnabled(self._laser_logic.laser_can_power)
 
@@ -262,9 +285,11 @@ class LaserGUI(GUIBase):
     @QtCore.Slot()
     def updateFromSpinBox(self):
         """ The user has changed the spinbox, update all other values from that. """
-        self._mw.setValueVerticalSlider.setValue(self._mw.setValueDoubleSpinBox.value())
+        lpr = self._laser_logic.laser_power_range
+        self._mw.setValueVerticalSlider.setValue(
+            (self._mw.setValueDoubleSpinBox.value() - lpr[0]) / (lpr[1] - lpr[0]) * 100)
         cur = self._mw.currentRadioButton.isChecked() and self._mw.currentRadioButton.isEnabled()
-        pwr = self._mw.powerRadioButton.isChecked() and  self._mw.powerRadioButton.isEnabled()
+        pwr = self._mw.powerRadioButton.isChecked() and self._mw.powerRadioButton.isEnabled()
         if pwr and not cur:
             self.sigPower.emit(self._mw.setValueDoubleSpinBox.value())
         elif cur and not pwr:

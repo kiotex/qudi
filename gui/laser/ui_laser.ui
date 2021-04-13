@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>730</width>
+    <width>740</width>
     <height>511</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Qudi: Laser</string>
+   <string>qudi: Laser</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -74,7 +74,7 @@
           </sizepolicy>
          </property>
          <property name="text">
-          <string>Laser</string>
+          <string>Emission</string>
          </property>
          <property name="checkable">
           <bool>true</bool>
@@ -122,12 +122,44 @@
           <enum>Qt::Vertical</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::Expanding</enum>
+          <enum>QSizePolicy::Fixed</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>147</height>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="externalButton">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>External</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
           </size>
          </property>
         </spacer>
@@ -161,8 +193,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>730</width>
-     <height>18</height>
+     <width>740</width>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuMenu">
@@ -184,8 +216,8 @@
     <number>1</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_2">
-    <layout class="QGridLayout" name="gridLayout_2">
-     <item row="0" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout_2">
+     <item>
       <widget class="QRadioButton" name="currentRadioButton">
        <property name="enabled">
         <bool>false</bool>
@@ -198,7 +230,7 @@
        </attribute>
       </widget>
      </item>
-     <item row="1" column="0">
+     <item>
       <widget class="QRadioButton" name="powerRadioButton">
        <property name="enabled">
         <bool>false</bool>
@@ -214,7 +246,7 @@
        </attribute>
       </widget>
      </item>
-     <item row="2" column="0">
+     <item>
       <widget class="QLabel" name="powerLabel">
        <property name="font">
         <font>
@@ -226,7 +258,7 @@
        </property>
       </widget>
      </item>
-     <item row="3" column="0">
+     <item>
       <widget class="QLabel" name="currentLabel">
        <property name="font">
         <font>
@@ -238,22 +270,53 @@
        </property>
       </widget>
      </item>
-     <item row="4" column="0">
+     <item>
       <widget class="ScienDSpinBox" name="setValueDoubleSpinBox">
        <property name="suffix">
         <string>W</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="0">
-      <widget class="QSlider" name="setValueVerticalSlider">
-       <property name="maximum">
-        <number>100</number>
-       </property>
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-      </widget>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QSlider" name="setValueVerticalSlider">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="autoFillBackground">
+          <bool>false</bool>
+         </property>
+         <property name="maximum">
+          <number>100</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="tickPosition">
+          <enum>QSlider::TicksBothSides</enum>
+         </property>
+         <property name="tickInterval">
+          <number>0</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </widget>

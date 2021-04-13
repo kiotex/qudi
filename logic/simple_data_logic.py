@@ -68,7 +68,8 @@ class SimpleDataLogic(GenericLogic):
             return
 
         data = np.zeros((100,  self._data_logic.getChannels()))
-        data[:, 0] = np.array([self._data_logic.getData() for i in range(100)])
+        #data[:, 0] = np.array([self._data_logic.getData() for i in range(100)])
+        data = np.array([self._data_logic.getData() for i in range(100)])
 
         self.buf = np.roll(self.buf, -100, axis=0)
         self.buf[-101:-1] = data

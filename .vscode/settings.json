@@ -7,6 +7,7 @@
     "python.analysis.extraPaths": [
         "${workspaceRoot}"
     ],
+    "python.autoComplete.addBrackets": true,
     "python.autoComplete.extraPaths": [
         "${workspaceRoot}"
     ],

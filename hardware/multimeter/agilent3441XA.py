@@ -20,13 +20,9 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 """
 
 import numpy as np
-
-import random
-import time
 import visa
 
 from core.module import Base
-from core.connector import Connector
 from core.configoption import ConfigOption
 from interface.process_interface import ProcessInterface
 from interface.process_control_interface import ProcessControlInterface
@@ -41,20 +37,20 @@ class Agilent3441XA(Base, ProcessInterface, ProcessControlInterface):
         module.Class: 'agilent3441XA.Agilent3441XA'
         usb_address: 'USB0::0x0957::0x0607::my47019114::0::INSTR'
         usb_timeout: 100 # in seconds
-        mesurement_mode: 'dc_current' #'dc_voltage'
+        measurement_mode: 'dc_current' #'dc_voltage'
     """
 
     # config
-    
+
     _usb_address = ConfigOption('usb_address', missing='error')
     _usb_timeout = ConfigOption('usb_timeout', 100, missing='warn')
-    _mesurement_mode = ConfigOption('mesurement_mode', missing='error')
-    
+    _measurement_mode = ConfigOption('measurement_mode', missing='error')
+
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
 
     def on_activate(self):
-        """ Initialisation performed during activation of the module.
+        """ Initialization performed during activation of the module.
         """
         try:
             # trying to load the visa connection to the module
@@ -62,34 +58,35 @@ class Agilent3441XA(Base, ProcessInterface, ProcessControlInterface):
             self._usb_connection = self.rm.open_resource(
                 resource_name=self._usb_address,
                 timeout=self._usb_timeout)
-                
+
             IDN = self._usb_connection.query('*IDN?').split(',')
             self.model = IDN[1]
-            self.log.info('Agilent3441XA> {0} {1} initialised and connected to hardware.'.format(IDN[0], IDN[1]))
-            
-        except:
-            self.log.error('Agilent3441XA> This agilent DMM could not connect to the GPIB '
-                           'address >>{}<<.'.format(self._usb_address))
-                           
-        if self._mesurement_mode == 'dc_current':
+            self.log.info(
+                'Agilent3441XA> {0} {1} initialized and connected to hardware.'.format(
+                    IDN[0], IDN[1]))
+
+        except BaseException:
+            self.log.error(
+                'Agilent3441XA> This agilent DMM could not connect to the GPIB '
+                'address >>{}<<.'.format(
+                    self._usb_address))
+
+        if self._measurement_mode == 'dc_current':
             self._usb_connection.query('MEAS:CURR:DC? AUTO,MAX')
             self.unit = 'A'
             self.unit_name = 'Ampere'
-        elif self._mesurement_mode == 'dc_voltage':
+        elif self._measurement_mode == 'dc_voltage':
             self._usb_connection.query('MEAS:DC? AUTO,MAX')
             self.unit = 'V'
             self.unit_name = 'Volt'
-                
+
     def on_deactivate(self):
-        """ Deinitialisation performed during deactivation of the module.
+        """ De-initialization performed during deactivation of the module.
         """
         self._usb_connection.close()
         self.rm.close()
         self.log.info('Agilent3441XA> deactivation')
         return
-
-
-
 
     def get_process_unit(self):
         """ Process unit, here Pa.
@@ -110,14 +107,10 @@ class Agilent3441XA(Base, ProcessInterface, ProcessControlInterface):
 
             @return tuple(float, float): minimum and maximum of control value
         """
-        return 0,1e4
-
+        return 0, 1e4
 
     def get_minimal_step(self):
         return 100.0
-
-
-
 
     def get_process_value(self):
         """ Process value, here temperature.
@@ -126,7 +119,6 @@ class Agilent3441XA(Base, ProcessInterface, ProcessControlInterface):
         """
         return self._usb_connection.query('READ?')
 
-
     def get_control_value(self):
         """ Get current control value, here heating power
 
@@ -134,12 +126,8 @@ class Agilent3441XA(Base, ProcessInterface, ProcessControlInterface):
         """
         return 0
 
-
     def set_control_value(self, value):
         return 0
-
-
-
 
     def get_counter(self, samples=1):
         """ Returns the current counts per second of the counter.
@@ -148,13 +136,12 @@ class Agilent3441XA(Base, ProcessInterface, ProcessControlInterface):
 
         @return float: the photon counts per second
         """
-        return np.array( [self._usb_connection.query('READ?') for i in range(samples)] )
+        return np.array([self._usb_connection.query('READ?')
+                         for i in range(samples)])
 
     def get_counter_channels(self):
         """ Returns the list of counter channel names.
         @return tuple(str): channel names
         Most methods calling this might just care about the number of channels, though.
         """
-        return _mesurement_mode
-
-
+        return self._measurement_mode

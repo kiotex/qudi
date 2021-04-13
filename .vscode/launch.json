@@ -17,7 +17,7 @@
                 "PATH": "${workspaceRoot};${env:PATH}",
                 "PYTHONPATH": "${workspaceRoot};${env:PYTHONPATH}"
             },
-            "justMyCode": false,
+            "justMyCode": true,
             "debugOptions": [
                 "WaitOnAbnormalExit",
                 "WaitOnNormalExit",

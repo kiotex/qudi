@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-This module handles the saving of data.
+This file contains the logic module for continuous stream saving of data.
+
+author: Dinesh Pinto
+email: d.pinto@fkf.mpg.de
 
 Qudi is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -15,116 +18,36 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Qudi. If not, see <http://www.gnu.org/licenses/>.
 
-Copyright (c) the Qudi Developers. See the COPYRIGHT.txt file at the
-top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi/>
+Copyright (c) Dinesh Pinto. See the COPYRIGHT.txt file at the
+top-level directory of this distribution and at <https://github.com/projecthira/qudi-hira/>
 """
 
-from cycler import cycler
 import datetime
 import inspect
 import logging
-import matplotlib.pyplot as plt
-import numpy as np
 import os
-import sys
 import time
 
-from collections import OrderedDict
-from core.configoption import ConfigOption
-from core.util import units
-from core.util.mutex import Mutex
-from core.util.network import netobtain
-from logic.generic_logic import GenericLogic
-from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.pyplot as plt
+import numpy as np
 from PIL import Image
 from PIL import PngImagePlugin
+from matplotlib.backends.backend_pdf import PdfPages
+
+from core.configoption import ConfigOption
+
+from logic.save_logic import SaveLogic, DailyLogHandler
 
 
-class DailyLogHandler(logging.FileHandler):
+class StreamSaveLogic(SaveLogic):
     """
-    log handler which uses savelogic's get_daily_directory to log to a
-    file called base_filename
-
-    @param base_filename str: The base filename of the log file in the daily
-                              directory. The filename will be datetime
-                              formatted. E.g. '%Y%m%d-%H%M%S-qudi.log'.
-    @param savelogic object: the savelogic
-    """
-
-    def __init__(self, base_filename, savelogic):
-        self._savelogic  = savelogic
-        self._base_filename = base_filename
-        # get current directory
-        self._current_directory = savelogic.get_daily_directory()
-        self._current_time = time.localtime()
-        super().__init__(self.filename)
-
-    @property
-    def current_directory(self):
-        """
-        Returns the currently used directory
-        """
-        return self._current_directory
-
-    @property
-    def filename(self):
-        return os.path.join(self._current_directory,
-                time.strftime(self._base_filename,
-                    self._current_time))
-
-    def emit(self, record):
-        """
-        Emits a record. It checks if we have to rollover to the next daily
-        directory before it emits the record.
-
-        @param record struct: a log record
-        """
-        # check if we have to rollover to the next day
-        now = time.localtime()
-        if (now.tm_year != self._current_time.tm_year
-                or now.tm_mon != self._current_time.tm_mon
-                or now.tm_mday != self._current_time.tm_mday):
-            # we do
-            # close file
-            self.flush()
-            self.close()
-            # remember current time
-            self._current_time = now
-            # get the new directory, but avoid recursion because
-            # get_daily_directory uses the log itself
-            level = self.level
-            self.setLevel(100)
-            new_directory = self._savelogic.get_daily_directory()
-            self.setLevel(level)
-            # open new file in new directory
-            self._current_directory = new_directory
-            self.baseFilename = self.filename
-            self._open()
-            super().emit(record)
-        else:
-            # we don't
-            super().emit(record)
-
-
-class FunctionImplementationError(Exception):
-
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
-class SaveLogic(GenericLogic):
-
-    """
-    A general class which saves all kinds of data in a general sense.
+    A general class which stream saves all kinds of data in a general sense.
 
     Example config for copy-paste:
-    
+
     savelogic:
-        module.Class: 'save_logic.SaveLogic'
-        win_data_directory: 'C:/Data'   # DO NOT CHANGE THE DIRECTORY HERE! ONLY IN THE CUSTOM FILE!
+        module.Class: 'stream_save_logic.StreamSaveLogic'
+        win_data_directory: 'C:/Data'
         unix_data_directory: 'Data/'
         log_into_daily_directory: True
         save_pdf: True
@@ -134,39 +57,8 @@ class SaveLogic(GenericLogic):
     _win_data_dir = ConfigOption('win_data_directory', 'C:/Data/')
     _unix_data_dir = ConfigOption('unix_data_directory', 'Data')
     log_into_daily_directory = ConfigOption('log_into_daily_directory', False, missing='warn')
-    save_pdf = ConfigOption('save_pdf', False)
-    save_png = ConfigOption('save_png', True)
 
     # Matplotlib style definition for saving plots
-    mpl_qd_style = {
-        'axes.prop_cycle': cycler(
-            'color',
-            ['#1f17f4',
-            '#ffa40e',
-            '#ff3487',
-            '#008b00',
-            '#17becf',
-            '#850085'
-            ]
-            ) + cycler('marker', ['o', 's', '^', 'v', 'D', 'd']),
-        'axes.edgecolor': '0.3',
-        'xtick.color': '0.3',
-        'ytick.color': '0.3',
-        'axes.labelcolor': 'black',
-        'font.size': '14',
-        'lines.linewidth': '2',
-        'figure.figsize': '12, 6',
-        'lines.markeredgewidth': '0',
-        'lines.markersize': '5',
-        'axes.spines.right': True,
-        'axes.spines.top': True,
-        'xtick.minor.visible': True,
-        'ytick.minor.visible': True,
-        'savefig.dpi': '180'
-        }
-
-    # Matplotlib style definition for saving plots
-    # Better than the default!
     mpl_qudihira_style = {
         'axes.linewidth': 0.5,
         'axes.labelweight': 'light',
@@ -190,45 +82,14 @@ class SaveLogic(GenericLogic):
     def __init__(self, config, **kwargs):
         super().__init__(config=config, **kwargs)
 
-        # locking for thread safety
-        self.lock = Mutex()
-
-        # name of active POI, default to empty string
-        self.active_poi_name = ''
-
-        # Some default variables concerning the operating system:
-        self.os_system = None
-
-        # Chech which operation system is used and include a case if the
-        # directory was not found in the config:
-        if sys.platform in ('linux', 'darwin'):
-            self.os_system = 'unix'
-            self.data_dir = self._unix_data_dir
-        elif 'win32' in sys.platform or 'AMD64' in sys.platform:
-            self.os_system = 'win'
-            self.data_dir = self._win_data_dir
-        else:
-            raise Exception('Identify the operating system.')
-
-        # Expand environment variables in the data_dir path (e.g. $HOME)
-        self.data_dir = os.path.expandvars(self.data_dir)
-
-        # start logging into daily directory?
-        if not isinstance(self.log_into_daily_directory, bool):
-                self.log.warning(
-                    'log entry in configuration is not a '
-                    'boolean. Falling back to default setting: False.')
-                self.log_into_daily_directory = False
-
-        self._daily_loghandler = None
-
     def on_activate(self):
-        """ Definition, configuration and initialisation of the SaveLogic.
+        """
+        Definition, configuration and initialisation of the SaveLogic.
         """
         if self.log_into_daily_directory:
             # adds a log handler for logging into daily directory
             self._daily_loghandler = DailyLogHandler(
-                    '%Y%m%d-%Hh%Mm%Ss-qudi.log', self)
+                '%Y%m%d-%Hh%Mm%Ss-qudi.log', self)
             self._daily_loghandler.setFormatter(logging.Formatter(
                 '%(asctime)s %(name)s %(levelname)s: %(message)s',
                 datefmt='%Y-%m-%d %H:%M:%S'))
@@ -242,23 +103,8 @@ class SaveLogic(GenericLogic):
             # removes the log handler logging into the daily directory
             logging.getLogger().removeHandler(self._daily_loghandler)
 
-    @property
-    def dailylog(self):
-        """
-        Returns the daily log handler.
-        """
-        return self._daily_loghandler
-
-    def dailylog_set_level(self, level):
-        """
-        Sets the log level of the daily log handler
-
-        @param level int: log level, see logging
-        """
-        self._daily_loghandler.setLevel(level)
-
-    def save_data(self, data, filepath=None, parameters=None, filename=None, filelabel=None,
-                  timestamp=None, filetype='text', fmt='%.15e', delimiter='\t', plotfig=None):
+    def create_file_and_header(self, data, filepath=None, parameters=None, filename=None, filelabel=None,
+                               timestamp=None, fmt='%s', delimiter='\t'):
         """
         General save routine for data.
 
@@ -349,10 +195,87 @@ class SaveLogic(GenericLogic):
         YOU ARE RESPONSIBLE FOR THE IDENTIFIER! DO NOT FORGET THE UNITS FOR THE SAVED TIME
         TRACE/MATRIX.
         """
-        start_time = time.time()
         # Create timestamp if none is present
         if timestamp is None:
             timestamp = datetime.datetime.now()
+
+        # try to trace back the functioncall to the class which was calling it.
+        try:
+            frm = inspect.stack()[1]
+            # this will get the object, which called the save_data function.
+            mod = inspect.getmodule(frm[0])
+            # that will extract the name of the class.
+            module_name = mod.__name__.split('.')[-1]
+        except:
+            # Sometimes it is not possible to get the object which called the save_data function
+            # (such as when calling this from the console).
+            module_name = 'UNSPECIFIED'
+
+        self.module_name = module_name
+
+        # determine proper file path
+        if filepath is None:
+            filepath = self.get_path_for_module(module_name)
+        elif not os.path.exists(filepath):
+            os.makedirs(filepath)
+            self.log.info('Custom filepath does not exist. Created directory "{0}"'
+                          ''.format(filepath))
+
+        # create filelabel if none has been passed
+        if filelabel is None:
+            filelabel = module_name
+        if self.active_poi_name != '':
+            filelabel = self.active_poi_name.replace(' ', '_') + '_' + filelabel
+
+        # determine proper unique filename to save if none has been passed
+        if filename is None:
+            filename = timestamp.strftime('%Y%m%d-%H%M-%S' + '_' + filelabel + '.dat')
+
+        # Check format specifier.
+        if not isinstance(fmt, str) and len(fmt) != len(data):
+            self.log.error('Length of list of format specifiers and number of data items differs. '
+                           'Saving not possible. Please pass exactly as many format specifiers as '
+                           'data arrays.')
+            return -1
+
+        # Create header string for the file
+        header = 'Saved Data from the class {0} on {1}.\n' \
+                 ''.format(module_name, timestamp.strftime('%d.%m.%Y at %Hh%Mm%Ss'))
+        header += '\nParameters:\n===========\n\n'
+        # Include the active POI name (if not empty) as a parameter in the header
+        if self.active_poi_name != '':
+            header += 'Measured at POI: {0}\n'.format(self.active_poi_name)
+        # add the parameters if specified:
+        if parameters is not None:
+            # check whether the format for the parameters have a dict type:
+            if isinstance(parameters, dict):
+                if isinstance(self._additional_parameters, dict):
+                    parameters = {**self._additional_parameters, **parameters}
+                for entry, param in parameters.items():
+                    if isinstance(param, float):
+                        header += '{0}: {1:.16e}\n'.format(entry, param)
+                    else:
+                        header += '{0}: {1}\n'.format(entry, param)
+            # make a hardcore string conversion and try to save the parameters directly:
+            else:
+                self.log.error('The parameters are not passed as a dictionary! The SaveLogic will '
+                               'try to save the parameters nevertheless.')
+                header += 'not specified parameters: {0}\n'.format(parameters)
+        header += '\nData:\n====='
+
+        self.log.info(f'{module_name} data being streamed to:\n{filepath}\\{filename}')
+        data[0] = "#" + data[0]
+        self.save_array_as_text(data=np.column_stack(data), filename=filename, filepath=filepath,
+                                fmt=fmt, header=header, delimiter=delimiter, comments='#',
+                                append=False)
+        return filename
+
+    def write_data(self, data_to_save, header, filename, filepath, fmt='%.15e', filetype='text', delimiter='\t'):
+        # write data to file
+        # FIXME: Implement other file formats
+        # write to textfile
+
+        data = {header: data_to_save}
 
         # Try to cast data array into numpy.ndarray if it is not already one
         # Also collect information on arrays in the process and do sanity checks
@@ -404,71 +327,6 @@ class SaveLogic(GenericLogic):
                            'arrays only. Saving data failed!')
             return -1
 
-        # try to trace back the functioncall to the class which was calling it.
-        try:
-            frm = inspect.stack()[1]
-            # this will get the object, which called the save_data function.
-            mod = inspect.getmodule(frm[0])
-            # that will extract the name of the class.
-            module_name = mod.__name__.split('.')[-1]
-        except:
-            # Sometimes it is not possible to get the object which called the save_data function
-            # (such as when calling this from the console).
-            module_name = 'UNSPECIFIED'
-
-        # determine proper file path
-        if filepath is None:
-            filepath = self.get_path_for_module(module_name)
-        elif not os.path.exists(filepath):
-            os.makedirs(filepath)
-            self.log.info('Custom filepath does not exist. Created directory "{0}"'
-                          ''.format(filepath))
-
-        # create filelabel if none has been passed
-        if filelabel is None:
-            filelabel = module_name
-        if self.active_poi_name != '':
-            filelabel = self.active_poi_name.replace(' ', '_') + '_' + filelabel
-
-        # determine proper unique filename to save if none has been passed
-        if filename is None:
-            filename = timestamp.strftime('%Y%m%d-%H%M-%S' + '_' + filelabel + '.dat')
-
-        # Check format specifier.
-        if not isinstance(fmt, str) and len(fmt) != len(data):
-            self.log.error('Length of list of format specifiers and number of data items differs. '
-                           'Saving not possible. Please pass exactly as many format specifiers as '
-                           'data arrays.')
-            return -1
-
-        # Create header string for the file
-        header = 'Saved Data from the class {0} on {1}.\n' \
-                 ''.format(module_name, timestamp.strftime('%d.%m.%Y at %Hh%Mm%Ss'))
-        header += '\nParameters:\n===========\n\n'
-        # Include the active POI name (if not empty) as a parameter in the header
-        if self.active_poi_name != '':
-            header += 'Measured at POI: {0}\n'.format(self.active_poi_name)
-        # add the parameters if specified:
-        if parameters is not None:
-            # check whether the format for the parameters have a dict type:
-            if isinstance(parameters, dict):
-                if isinstance(self._additional_parameters, dict):
-                    parameters = {**self._additional_parameters, **parameters}
-                for entry, param in parameters.items():
-                    if isinstance(param, float):
-                        header += '{0}: {1:.16e}\n'.format(entry, param)
-                    else:
-                        header += '{0}: {1}\n'.format(entry, param)
-            # make a hardcore string conversion and try to save the parameters directly:
-            else:
-                self.log.error('The parameters are not passed as a dictionary! The SaveLogic will '
-                               'try to save the parameters nevertheless.')
-                header += 'not specified parameters: {0}\n'.format(parameters)
-        header += '\nData:\n=====\n'
-
-        # write data to file
-        # FIXME: Implement other file formats
-        # write to textfile
         if filetype == 'text':
             # Reshape data if multiple 1D arrays have been passed to this method.
             # If a 2D array has been passed, reformat the specifier
@@ -507,33 +365,53 @@ class SaveLogic(GenericLogic):
                 data[identifier_str] = data.pop(keyname)
             else:
                 identifier_str = list(data)[0]
-            header += list(data)[0]
+
             self.save_array_as_text(data=data[identifier_str], filename=filename, filepath=filepath,
-                                    fmt=fmt, header=header, delimiter=delimiter, comments='#',
-                                    append=False)
+                                    fmt=fmt, header="", delimiter=delimiter, comments='#',
+                                    append=True)
+
         # write npz file and save parameters in textfile
         elif filetype == 'npz':
-            header += str(list(data.keys()))[1:-1]
+            header = str(list(data.keys()))[1:-1]
             np.savez_compressed(filepath + '/' + filename[:-4], **data)
-            self.save_array_as_text(data=[], filename=filename[:-4]+'_params.dat', filepath=filepath,
-                                    fmt=fmt, header=header, delimiter=delimiter, comments='#',
-                                    append=False)
+            self.save_array_as_text(data=[], filename=filename[:-4] + '_params.dat', filepath=filepath,
+                                    fmt=fmt, header="", delimiter=delimiter, comments='#',
+                                    append=True)
         else:
             self.log.error('Only saving of data as textfile and npz-file is implemented. Filetype "{0}" is not '
                            'supported yet. Saving as textfile.'.format(filetype))
             self.save_array_as_text(data=data[identifier_str], filename=filename, filepath=filepath,
                                     fmt=fmt, header=header, delimiter=delimiter, comments='#',
-                                    append=False)
+                                    append=True)
 
-        #--------------------------------------------------------------------------------------------
+    def save_array_as_text(self, data, filename, filepath='', fmt='%.15e', header='',
+                           delimiter='\t', comments='#', append=False):
+        """
+        An Independent method, which can save a 1D or 2D numpy.ndarray as textfile.
+        Can append to files.
+        """
+        # write to file. Append if requested.
+        if append:
+            with open(os.path.join(filepath, filename), 'ab') as file:
+                np.savetxt(file, data, fmt=fmt, delimiter=delimiter, header=header,
+                           comments=comments)
+        else:
+            with open(os.path.join(filepath, filename), 'wb') as file:
+                np.savetxt(file, data, fmt=fmt, delimiter=delimiter, header=header,
+                           comments=comments)
+        return
+
+    def save_figure(self, filepath, filename, plotfig=None, timestamp=None):
+        # --------------------------------------------------------------------------------------------
         # Save thumbnail figure of plot
         if plotfig is not None:
             # create Metadata
             metadata = dict()
-            metadata['Title'] = 'Image produced by qudi: ' + module_name
-            metadata['Author'] = 'qudi - Software Suite'
-            metadata['Subject'] = 'Find more information on: https://github.com/Ulm-IQO/qudi'
-            metadata['Keywords'] = 'Python 3, Qt, experiment control, automation, measurement, software, framework, modular'
+            metadata['Title'] = 'Image produced by qudi-hira: ' + self.module_name
+            metadata['Author'] = 'qudi-hira - Software Suite'
+            metadata['Subject'] = 'Find more information on: https://github.com/projecthira/qudi-hira'
+            metadata[
+                'Keywords'] = 'Python 3, Qt, experiment control, automation, measurement, software, framework, modular'
             metadata['Producer'] = 'qudi - Software Suite'
             if timestamp is not None:
                 metadata['CreationDate'] = timestamp
@@ -541,7 +419,7 @@ class SaveLogic(GenericLogic):
             else:
                 metadata['CreationDate'] = time
                 metadata['ModDate'] = time
-            
+
             if self.save_pdf:
                 # determine the PDF-Filename
                 fig_fname_vector = os.path.join(filepath, filename)[:-4] + '_fig.pdf'
@@ -556,6 +434,7 @@ class SaveLogic(GenericLogic):
                     pdf_metadata = pdf.infodict()
                     for x in metadata:
                         pdf_metadata[x] = metadata[x]
+                self.log.info(f'Image saved to: \n{fig_fname_vector}')
 
             if self.save_png:
                 # determine the PNG-Filename and save the plain PNG
@@ -580,104 +459,8 @@ class SaveLogic(GenericLogic):
 
                 # save the picture again, this time including the metadata
                 png_image.save(fig_fname_image, "png", pnginfo=png_metadata)
+                self.log.info(f'Image saved to: \n{fig_fname_image}')
 
             # close matplotlib figure
             plt.close(plotfig)
-            self.log.debug('Time needed to save data: {0:.2f}s'.format(time.time()-start_time))
-            #----------------------------------------------------------------------------------
-
-    def save_array_as_text(self, data, filename, filepath='', fmt='%.15e', header='',
-                           delimiter='\t', comments='#', append=False):
-        """
-        An Independent method, which can save a 1D or 2D numpy.ndarray as textfile.
-        Can append to files.
-        """
-        # write to file. Append if requested.
-        if append:
-            with open(os.path.join(filepath, filename), 'ab') as file:
-                np.savetxt(file, data, fmt=fmt, delimiter=delimiter, header=header,
-                           comments=comments)
-        else:
-            with open(os.path.join(filepath, filename), 'wb') as file:
-                np.savetxt(file, data, fmt=fmt, delimiter=delimiter, header=header,
-                           comments=comments)
-        return
-
-    def get_daily_directory(self):
-        """ Gets or creates daily save directory.
-
-          @return string: path to the daily directory.
-
-        If the daily directory does not exits in the specified <root_dir> path
-        in the config file, then it is created according to the following scheme:
-
-            <root_dir>\<year>\<month>\<yearmonthday>
-
-        and the filepath is returned. There should be always a filepath
-        returned.
-        """
-        current_dir = os.path.join(
-            self.data_dir, 
-            time.strftime("%Y"), 
-            time.strftime("%m"),
-            time.strftime("%Y%m%d"))
-
-        if not os.path.isdir(current_dir):
-            self.log.info("Creating directory for today's data:\n"
-                    '{0}'.format(current_dir))
-
-            # The exist_ok=True is necessary here to prevent Error 17 "File Exists"
-            # Details at http://stackoverflow.com/questions/12468022/python-fileexists-error-when-making-directory
-            os.makedirs(current_dir, exist_ok=True)
-
-        return current_dir
-
-    def get_path_for_module(self, module_name):
-        """
-        Method that creates a path for 'module_name' where data are stored.
-
-        @param string module_name: Specify the folder, which should be created in the daily
-                                   directory. The module_name can be e.g. 'Confocal'.
-        @return string: absolute path to the module name
-        """
-        dir_path = os.path.join(self.get_daily_directory(), module_name)
-
-        if not os.path.isdir(dir_path):
-            os.makedirs(dir_path, exist_ok=True)
-        return dir_path
-
-    def get_additional_parameters(self):
-        """ Method that return the additional parameters dictionary securely """
-        return self._additional_parameters.copy()
-
-    def update_additional_parameters(self, *args, **kwargs):
-        """
-        Method to update one or multiple additional parameters
-
-        @param dict args: Optional single positional argument holding parameters in a dict to
-                          update additional parameters from.
-        @param kwargs: Optional keyword arguments to be added to additional parameters
-        """
-        if len(args) == 0:
-            param_dict = kwargs
-        elif len(args) == 1 and isinstance(args[0], dict):
-            param_dict = args[0]
-            param_dict.update(kwargs)
-        else:
-            raise TypeError('"update_additional_parameters" takes exactly 0 or 1 positional '
-                            'argument of type dict.')
-
-        for key in param_dict.keys():
-            param_dict[key] = netobtain(param_dict[key])
-        self._additional_parameters.update(param_dict)
-        return
-
-    def remove_additional_parameter(self, key):
-        """
-        remove parameter from additional parameters
-
-        @param str key: The additional parameters key/name to delete
-        """
-        self._additional_parameters.pop(key, None)
-        return
-
+            # ----------------------------------------------------------------------------------

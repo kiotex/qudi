@@ -267,7 +267,8 @@ class ManagerGui(GUIBase):
             @param dict entry: Log entry
         """
         self._mw.logwidget.addEntry(entry)
-        if entry['level'] == 'error' or entry['level'] == 'critical':
+        #if entry['level'] == 'error' or entry['level'] == 'critical':
+        if entry['level'] == 'error' or entry['level'] == 'critical' or entry['level'] == 'warning':
             self.errorDialog.show(entry)
 
     def startIPython(self):

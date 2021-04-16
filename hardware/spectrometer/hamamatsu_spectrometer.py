@@ -28,7 +28,9 @@ import numpy as np
 import os
 import ctypes
 
-DLL = ctypes.windll.LoadLibrary('C:\Program Files\HamamatsuMinispectrometer\DeveloperTools\ForVisualC++\SampleApl\DLL\specu1a.dll')
+DLL = ctypes.windll.LoadLibrary(
+    r'C:\Program Files\HamamatsuMinispectrometer\DeveloperTools\ForVisualC++\SampleApl\DLL\specu1a.dll')
+
 
 class Parameters(ctypes.Structure):
     _fields_ = [('IntegrationTime', ctypes.c_int),
@@ -37,21 +39,22 @@ class Parameters(ctypes.Structure):
                 ('TriggerMode', ctypes.c_byte),
                 ('Reserved', ctypes.c_byte), ]
 
+
 class UnitInformation(ctypes.Structure):
     _fields_ = [('UnitID', ctypes.c_ubyte * 8),
                 ('SensorName', ctypes.c_ubyte * 16),
                 ('SerialNumber', ctypes.c_ubyte * 8),
-                ('Reserved', ctypes.c_ubyte * 8), 
-                ('WaveLengthUpper', ctypes.c_ushort), 
+                ('Reserved', ctypes.c_ubyte * 8),
+                ('WaveLengthUpper', ctypes.c_ushort),
                 ('WaveLengthLower', ctypes.c_ushort), ]
 
 
 def ctypesArrayToString(arr):
-    #return ''.join(chr(i) for i in arr)
-    return ''.join( list(map(chr, arr)) )
+    # return ''.join(chr(i) for i in arr)
+    return ''.join(list(map(chr, arr)))
 
 
-class HamamatsuSpectrometer(Base,SpectrometerInterface):
+class HamamatsuSpectrometer(Base, SpectrometerInterface):
     """ Hamamatsu spectrometer module.
 
     Example config for copy-paste:
@@ -83,12 +86,12 @@ class HamamatsuSpectrometer(Base,SpectrometerInterface):
     def recordSpectrum(self):
         """ Record a dummy spectrum.
 
-            @return ndarray: 
+            @return ndarray:
                 1024-value ndarray containing wavelength and intensity of simulated spectrum
         """
-        return np.stack([ self._wavelength, self._getSensorData() ])
+        return np.stack([self._wavelength, self._getSensorData()])
 
-    def saveSpectrum(self, path, postfix = ''):
+    def saveSpectrum(self, path, postfix=''):
         """ Dummy save function.
 
             @param str path: path of saved spectrum
@@ -113,45 +116,52 @@ class HamamatsuSpectrometer(Base,SpectrometerInterface):
         self._param.IntegrationTime = exposureTime
         self._setParameters()
 
-
-
     # =================== DLL Wrapper ========================
-    
+
     def _openDevice(self):
-        self.deviceHandle = DLL.USB_OpenDevice( self._productID )
-        self.pipeHandle = DLL.USB_OpenPipe( self._deviceHandle )
+        self.deviceHandle = DLL.USB_OpenDevice(self._productID)
+        self.pipeHandle = DLL.USB_OpenPipe(self._deviceHandle)
         return 0
 
     def _closeDevice(self):
-        DLL.USB_ClosePipe( self._pipeHandle )
-        DLL.USB_CloseDevice( self._deviceHandle )
+        DLL.USB_ClosePipe(self._pipeHandle)
+        DLL.USB_CloseDevice(self._deviceHandle)
         return 0
 
     def _getParameters(self):
-        DLL.USB_GetParameter( self._deviceHandle, ctypes.byref(self._param) )
+        DLL.USB_GetParameter(self._deviceHandle, ctypes.byref(self._param))
 
     def _setParameters(self):
-        DLL.USB_SetParameter( self._deviceHandle, ctypes.byref(self._param) )
+        DLL.USB_SetParameter(self._deviceHandle, ctypes.byref(self._param))
 
     def _getUnitInformation(self):
-        DLL.USB_ReadUnitInformation( self._deviceHandle, ctypes.byref(self._unitInfo) )
+        DLL.USB_ReadUnitInformation(
+            self._deviceHandle, ctypes.byref(
+                self._unitInfo))
 
     def _setUnitInformation(self):
         pass
 
     def _getCalibrationValue(self):
-        calibrationValue = ( ctypes.c_double * 6 )()
-        DLL.USB_ReadCalibrationValue( self._deviceHandle, ctypes.byref(calibrationValue) )
-        self._calibrationValue = np.ctypeslib.as_array( calibrationValue )
-        self._wavelength = np.polyval( self._calibrationValue[::-1], range(1, 1+self._pixelSize) ) * 1e-9  # Send to logic in SI units (m)
+        calibrationValue = (ctypes.c_double * 6)()
+        DLL.USB_ReadCalibrationValue(
+            self._deviceHandle,
+            ctypes.byref(calibrationValue))
+        self._calibrationValue = np.ctypeslib.as_array(calibrationValue)
+        self._wavelength = np.polyval(self._calibrationValue[::-1], range(
+            1, 1 + self._pixelSize)) * 1e-9  # Send to logic in SI units (m)
 
     def _setCalibrationValue(self):
         pass
 
     def _getSensorData(self):
         # get spectrum
-        specdata = ( ctypes.c_ushort * self._pixelSize )()
-        DLL.USB_GetSensorData( self._deviceHandle, self._pipeHandle, self._pixelSize, ctypes.byref(specdata) )
+        specdata = (ctypes.c_ushort * self._pixelSize)()
+        DLL.USB_GetSensorData(
+            self._deviceHandle,
+            self._pipeHandle,
+            self._pixelSize,
+            ctypes.byref(specdata))
         return np.ctypeslib.as_array(specdata)
 
     def _getSensorDataT(self):

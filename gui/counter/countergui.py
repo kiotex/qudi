@@ -72,6 +72,8 @@ class CounterGui(GUIBase):
         # Use the inherited class 'CounterMainWindow' to create the GUI window
         self._mw = CounterMainWindow()
 
+        self._mw.setWindowTitle(self._mw.windowTitle() + f' [{self._counting_logic._counting_device._name}]')
+
         # Setup dock widgets
         self._mw.centralwidget.hide()
         self._mw.trace_selection_DockWidget.hide()

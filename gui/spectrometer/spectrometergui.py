@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module contains a GUI for operating the spectrum logic module.
+This module contains a GUI for operating the spectrum gui module.
 
 Qudi is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 
 import os
 import pyqtgraph as pg
+from pyqtgraph import InfiniteLine
 import numpy as np
 
 from core.connector import Connector
@@ -141,6 +142,22 @@ class SpectrometerGui(GUIBase):
         self._fsd.applySettings()
         self._mw.action_FitSettings.triggered.connect(self._fsd.show)
 
+        # vertical line for fit domain
+        self.vline_fit_domain = [
+            InfiniteLine(
+                pos=0, angle=90, movable=True,
+                pen={'color': '#00ff00', 'width': 1},
+                hoverPen={'color': '#ffff00', 'width': 1}),
+            InfiniteLine(
+                pos=0, angle=90, movable=True,
+                pen={'color': '#00ff00', 'width': 1},
+                hoverPen={'color': '#ffff00', 'width': 1}),]
+
+        for i in range(2):
+            self.vline_fit_domain[i].hide()
+            self._pw.addItem(self.vline_fit_domain[i])
+            self.vline_fit_domain[i].sigDragged.connect(self._update_fit_domain_from_line)
+
     def on_deactivate(self):
         """ Deinitialisation performed during deactivation of the module.
         """
@@ -163,7 +180,7 @@ class SpectrometerGui(GUIBase):
 
         # erase previous fit line
         self._curve2.setData(x=[], y=[])
-        
+
         # draw new data
         self._curve1.setData(x=data[0, :], y=data[1, :])
 
@@ -239,9 +256,36 @@ class SpectrometerGui(GUIBase):
         lambda_min = self._mw.fit_domain_min_doubleSpinBox.value()
         lambda_max = self._mw.fit_domain_max_doubleSpinBox.value()
 
+        if lambda_min != lambda_max:
+            self.vline_fit_domain[0].setX(lambda_min)
+            self.vline_fit_domain[1].setX(lambda_max)
+
+            if not self.vline_fit_domain[0].isVisible():
+                self.vline_fit_domain[0].show()
+                self.vline_fit_domain[1].show()
+
         new_fit_domain = np.array([lambda_min, lambda_max])
 
         self._spectrum_logic.set_fit_domain(new_fit_domain)
+
+    def _update_fit_domain_from_line(self, obj):
+        """
+        Called each time the position of the InfiniteLines has been changed by a user drag.
+        Causes the crosshair rectangle to follow the lines.
+        """
+        if obj not in self.vline_fit_domain:
+            return
+
+        domain = sorted([self.vline_fit_domain[i].x() for i in range(2)])
+
+        print(domain)
+
+        #self.vline_fit_domain[0].setX(domain[0])
+        #self.vline_fit_domain[1].setX(domain[1])
+
+        self.update_fit_domain(domain)
+
+        self._spectrum_logic.set_fit_domain(np.array(domain))
 
     def reset_fit_domain_all_data(self):
         """ Reset the fit domain to match the full data set.

@@ -285,7 +285,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Stop differential</string>
+    <string>Stop &#010; differential</string>
    </property>
   </action>
   <action name="restore_default_view_Action">
@@ -295,7 +295,7 @@
   </action>
   <action name="start_diff_spec_Action">
    <property name="text">
-    <string>Start differential</string>
+    <string>Start &#010; differential</string>
    </property>
    <property name="toolTip">
     <string>Start differential (D)</string>
@@ -321,7 +321,7 @@
   </action>
   <action name="resume_diff_spec_Action">
    <property name="text">
-    <string>Resume differential</string>
+    <string>Resume &#010; differential</string>
    </property>
    <property name="toolTip">
     <string>Resume a differential spectrum which was stopped</string>
@@ -329,10 +329,7 @@
   </action>
   <action name="acquire_background_Action">
    <property name="text">
-    <string>Acquire Background</string>
-   </property>
-   <property name="iconText">
-    <string>Acquire &amp;Background</string>
+    <string>Acquire &#010; Background</string>
    </property>
    <property name="toolTip">
     <string>Acquire Background Spectrum (B)</string>
@@ -362,7 +359,7 @@
   </action>
   <action name="save_background_Action">
    <property name="text">
-    <string>Save Background</string>
+    <string>Save &#010; Background</string>
    </property>
    <property name="toolTip">
     <string>Save the background spectrum (Shift+B)</string>

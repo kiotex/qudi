@@ -114,7 +114,7 @@ class SpectrumLogic(GenericLogic):
             d1['Gaussian peak'] = {
                 'fit_function': 'gaussian',
                 'estimator': 'peak'
-                }
+            }
             default_fits = OrderedDict()
             default_fits['1d'] = d1
             fc.load_from_dict(default_fits)
@@ -135,9 +135,11 @@ class SpectrumLogic(GenericLogic):
         self.fc.clear_result()
 
         if background:
-            self._spectrum_background = netobtain(self._spectrometer_device.recordSpectrum())
+            self._spectrum_background = netobtain(
+                self._spectrometer_device.recordSpectrum())
         else:
-            self._spectrum_data = netobtain(self._spectrometer_device.recordSpectrum())
+            self._spectrum_data = netobtain(
+                self._spectrometer_device.recordSpectrum())
 
         self._calculate_corrected_spectrum()
 
@@ -150,13 +152,15 @@ class SpectrumLogic(GenericLogic):
 
     def _calculate_corrected_spectrum(self):
         self._spectrum_data_corrected = np.copy(self._spectrum_data)
-        if len(self._spectrum_background) == 2 \
-                and len(self._spectrum_background[1, :]) == len(self._spectrum_data[1, :]):
-            self._spectrum_data_corrected[1, :] -= self._spectrum_background[1, :]
+        if len(self._spectrum_background) == 2 and len(
+                self._spectrum_background[1, :]) == len(self._spectrum_data[1, :]):
+            self._spectrum_data_corrected[1,
+                                          :] -= self._spectrum_background[1, :]
         else:
-            self.log.warning('Background spectrum has a different dimension then the acquired spectrum. '
-                             'Returning raw spectrum. '
-                             'Try acquiring a new background spectrum.')
+            self.log.warning(
+                'Background spectrum has a different dimension then the acquired spectrum. '
+                'Returning raw spectrum. '
+                'Try acquiring a new background spectrum.')
 
     @property
     def spectrum_data(self):
@@ -191,13 +195,15 @@ class SpectrumLogic(GenericLogic):
 
         self._continue_differential = True
 
-        # Taking a demo spectrum gives us the wavelength values and the length of the spectrum data.
+        # Taking a demo spectrum gives us the wavelength values and the length
+        # of the spectrum data.
         demo_data = netobtain(self._spectrometer_device.recordSpectrum())
 
         wavelengths = demo_data[0, :]
         empty_signal = np.zeros(len(wavelengths))
 
-        # Using this information to initialise the differential spectrum data arrays.
+        # Using this information to initialise the differential spectrum data
+        # arrays.
         self._spectrum_data = np.array([wavelengths, empty_signal])
         self.diff_spec_data_mod_on = np.array([wavelengths, empty_signal])
         self.diff_spec_data_mod_off = np.array([wavelengths, empty_signal])
@@ -224,7 +230,8 @@ class SpectrumLogic(GenericLogic):
         if not self._continue_differential:
             return
 
-        # Otherwise, we make a measurement and then emit a signal to repeat this loop.
+        # Otherwise, we make a measurement and then emit a signal to repeat
+        # this loop.
 
         # Toggle on, take spectrum and add data to the mod_on data
         self.toggle_modulation(on=True)
@@ -264,7 +271,11 @@ class SpectrumLogic(GenericLogic):
         else:
             print("Parameter 'on' needs to be boolean")
 
-    def save_spectrum_data(self, background=False, name_tag='', custom_header = None):
+    def save_spectrum_data(
+            self,
+            background=False,
+            name_tag='',
+            custom_header=None):
         """ Saves the current spectrum data to a file.
 
         @param bool background: Whether this is a background spectrum (dark field) or not.
@@ -297,7 +308,7 @@ class SpectrumLogic(GenericLogic):
 
             for name, param in self.fc.current_fit_param.items():
                 parameters[name] = str(param)
-        
+
         # add any custom header params
         if custom_header is not None:
             for key in custom_header:
@@ -308,8 +319,11 @@ class SpectrumLogic(GenericLogic):
 
         data['wavelength'] = spectrum_data[0, :]
 
-        # If the differential spectra arrays are not empty, save them as raw data
-        if len(self.diff_spec_data_mod_on) != 0 and len(self.diff_spec_data_mod_off) != 0:
+        # If the differential spectra arrays are not empty, save them as raw
+        # data
+        if len(
+                self.diff_spec_data_mod_on) != 0 and len(
+                self.diff_spec_data_mod_off) != 0:
             data['signal_mod_on'] = self.diff_spec_data_mod_on[1, :]
             data['signal_mod_off'] = self.diff_spec_data_mod_off[1, :]
             data['differential'] = spectrum_data[1, :]
@@ -334,13 +348,13 @@ class SpectrumLogic(GenericLogic):
 
         @return fig fig: a matplotlib figure object to be saved to file.
         """
-        wavelength = self.spectrum_data[0, :] * 1e9 # convert m to nm for plot
+        wavelength = self.spectrum_data[0, :] * 1e9  # convert m to nm for plot
         spec_data = self.spectrum_data[1, :]
 
         prefix = ['', 'k', 'M', 'G', 'T']
         prefix_index = 0
         rescale_factor = 1
-        
+
         # Rescale spectrum data with SI prefix
         while np.max(spec_data) / rescale_factor > 1000:
             rescale_factor = rescale_factor * 1000
@@ -357,14 +371,14 @@ class SpectrumLogic(GenericLogic):
                  spec_data / rescale_factor,
                  linestyle=':',
                  linewidth=0.5
-                )
-        
+                 )
+
         # If there is a fit, plot it also
         if self.fc.current_fit_result is not None:
             ax1.plot(self.spectrum_fit[0] * 1e9,  # convert m to nm for plot
                      self.spectrum_fit[1] / rescale_factor,
                      marker='None'
-                    )
+                     )
 
         ax1.set_xlabel('Wavelength (nm)')
         ax1.set_ylabel('Intensity ({}count)'.format(intensity_prefix))
@@ -408,9 +422,9 @@ class SpectrumLogic(GenericLogic):
             else:
                 self.fc.set_current_fit('No Fit')
                 if fit_function != 'No Fit':
-                    self.log.warning('Fit function "{0}" not available in Spectrum logic '
-                                     'fit container.'.format(fit_function)
-                                     )
+                    self.log.warning(
+                        'Fit function "{0}" not available in Spectrum logic '
+                        'fit container.'.format(fit_function))
 
         spectrum_fit_x, spectrum_fit_y, result = self.fc.do_fit(x_data, y_data)
 
@@ -435,7 +449,7 @@ class SpectrumLogic(GenericLogic):
         @return index of nearest element.
         """
 
-        idx = (np.abs(array-value)).argmin()
+        idx = (np.abs(array - value)).argmin()
         return idx
 
     def set_fit_domain(self, domain=None):
@@ -448,6 +462,7 @@ class SpectrumLogic(GenericLogic):
         if domain is not None:
             self.fit_domain = domain
         else:
-            self.fit_domain = np.array([self.spectrum_data[0, 0], self.spectrum_data[0, -1]])
+            self.fit_domain = np.array(
+                [self.spectrum_data[0, 0], self.spectrum_data[0, -1]])
 
         self.fit_domain_updated_Signal.emit(self.fit_domain)

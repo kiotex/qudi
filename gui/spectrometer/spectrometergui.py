@@ -256,14 +256,6 @@ class SpectrometerGui(GUIBase):
         lambda_min = self._mw.fit_domain_min_doubleSpinBox.value()
         lambda_max = self._mw.fit_domain_max_doubleSpinBox.value()
 
-        if lambda_min != lambda_max:
-            self.vline_fit_domain[0].setX(lambda_min)
-            self.vline_fit_domain[1].setX(lambda_max)
-
-            if not self.vline_fit_domain[0].isVisible():
-                self.vline_fit_domain[0].show()
-                self.vline_fit_domain[1].show()
-
         new_fit_domain = np.array([lambda_min, lambda_max])
 
         self._spectrum_logic.set_fit_domain(new_fit_domain)
@@ -292,11 +284,18 @@ class SpectrometerGui(GUIBase):
         """
         self._spectrum_logic.set_fit_domain()
 
+        if not self.vline_fit_domain[0].isVisible():
+            self.vline_fit_domain[0].show()
+            self.vline_fit_domain[1].show()
+
     def update_fit_domain(self, domain):
         """ Update the displayed fit domain to new values (set elsewhere).
         """
         self._mw.fit_domain_min_doubleSpinBox.setValue(domain[0])
         self._mw.fit_domain_max_doubleSpinBox.setValue(domain[1])
+
+        self.vline_fit_domain[0].setX(domain[0])
+        self.vline_fit_domain[1].setX(domain[1])
 
     def restore_default_view(self):
         """ Restore the arrangement of DockWidgets to the default

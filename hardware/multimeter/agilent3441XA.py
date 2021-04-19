@@ -24,20 +24,11 @@ import visa
 
 from core.module import Base
 from core.configoption import ConfigOption
-
 from interface.process_interface import ProcessInterface
-from interface.process_control_interface import ProcessControlInterface
-
-from interface.slow_counter_interface import SlowCounterInterface
-from interface.slow_counter_interface import SlowCounterConstraints
-from interface.slow_counter_interface import CountingMode
-
 
 class Agilent3441XA(
         Base,
-        ProcessInterface,
-        ProcessControlInterface,
-        SlowCounterInterface):
+        ProcessInterface):
     """ Hardware control file for Agilent Devices.
 
     The hardware file was tested using the model Agilent 34410A.
@@ -97,29 +88,14 @@ class Agilent3441XA(
         self.log.info('Agilent3441XA> deactivation')
         return
 
+    # ================ ProcessInterface Commands =======================
+
     def get_process_unit(self, channel=None):
-        """ Process unit, here Pa.
-
-            @return float: process unit
-        """
-        return self.unit, self.unit_name
-
-    def get_control_unit(self, channel=None):
-        """ Get unit of control value.
+        """ Get unit of process unit.
 
             @return tuple(str): short and text unit of control value
         """
         return self.unit, self.unit_name
-
-    def get_control_limit(self, channel=None):
-        """ Get minimum and maximum of control value.
-
-            @return tuple(float, float): minimum and maximum of control value
-        """
-        return 0, 1e4
-
-    def get_minimal_step(self):
-        return 100.0
 
     def get_process_value(self, channel=None):
         """ Process value, here temperature.
@@ -128,28 +104,13 @@ class Agilent3441XA(
         """
         return self._usb_connection.query('READ?')
 
-    def get_control_value(self, channel=None):
-        """ Get current control value, here heating power
+    # ================ End ProcessInterface Commands ==================
 
-            @return float: current control value
-        """
-        return 0
-
-    def set_control_value(self, value, channel=None):
-        return 0
-
-    def get_counter(self, samples=1):
-        """ Returns the current counts per second of the counter.
-
-        @param int samples: if defined, number of samples to read in one go
-
-        @return float: the photon counts per second
-        """
-        return self.get_process_value()
-
+    # ================ For SlowCounterInterface Commands =====================
     def get_counter_channels(self):
         """ Returns the list of counter channel names.
         @return tuple(str): channel names
         Most methods calling this might just care about the number of channels, though.
         """
         return self._measurement_mode
+    # ================ End SlowCounterInterface Commands ==================

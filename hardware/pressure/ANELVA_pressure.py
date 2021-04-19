@@ -26,6 +26,7 @@ from interface.process_control_interface import ProcessControlInterface
 
 import serial
 
+
 class M601GC(Base, ProcessInterface):
     """ Methods to control ANELVA M-601GC.
     https://dia-pe-titech.esa.io/posts/251
@@ -39,18 +40,15 @@ class M601GC(Base, ProcessInterface):
         timeout: 1
     """
 
-
     _port = ConfigOption('port')
     _baudrate = ConfigOption('baudrate', 9600, missing='warn')
     _timeout = ConfigOption('timeout', 1, missing='warn')
-
 
     CMD_RETRY_NUM = 10
     CMD_ZERO_NUM = 100
 
     STX = b'$'
     ETX = b'\r'
-
 
     def on_activate(self):
         """ Activate module.
@@ -68,33 +66,26 @@ class M601GC(Base, ProcessInterface):
             self._serial_connection.open()
 
         self.gaugetype = self._send_cmd(b'$TID\r').strip('$ \r')
-        self.log.info('Gauge type: {0}'.format( self.gaugetype ))
+        self.log.info('Gauge type: {0}'.format(self.gaugetype))
 
         self.start_reading_process_value(refresh_rate=1)
-
 
     def on_deactivate(self):
         """ Deactivate module.
         """
         self._serial_connection.close()
 
-
-
-
     def get_name(self):
         return self.gaugetype
 
-    def get_process_unit(self):
+    def get_process_unit(self, channel=None):
         """ Process unit, here Pa.
 
             @return float: process unit
         """
         return 'Pa', 'pascal'
 
-
-
-
-    def get_process_value(self):
+    def get_process_value(self, channel=None):
         """ Process value, here temperature.
 
             @return float: process value
@@ -108,19 +99,26 @@ class M601GC(Base, ProcessInterface):
         errornum = int(res[1])
 
         if errornum != 0:
-            errorlist= ['オーバーレンジ', 'アンダーレンジ', 'コントローラエラー(Err03, Err04)', '未使用', 'ゲージ未接続状態', 'Id抵抗エラー(ErrId)', '接続ゲージエラー(ErrHi, ErrLo, Err06, Err07)']
-            self.log.critical('Error: {0}'.format( errorlist[errornum-1] ))
+            errorlist = [
+                'オーバーレンジ',
+                'アンダーレンジ',
+                'コントローラエラー(Err03, Err04)',
+                '未使用',
+                'ゲージ未接続状態',
+                'Id抵抗エラー(ErrId)',
+                '接続ゲージエラー(ErrHi, ErrLo, Err06, Err07)']
+            self.log.critical('Error: {0}'.format(errorlist[errornum - 1]))
         return float(res[3:])
 
     def start_reading_process_value(self, refresh_rate=0.1):
         if refresh_rate >= 60:
-            freqtype = b'2'
+            freqtype = b'2'  # interval is 60 sec
         elif refresh_rate >= 1:
-            freqtype = b'1'
+            freqtype = b'1'  # interval is 1 sec
         else:
-            freqtype = b'0'
+            freqtype = b'0'  # interval is 0.1 sec
 
-        self._send_cmd( b'$CON,' + freqtype + b'\r' )
+        self._send_cmd(b'$CON,' + freqtype + b'\r')
 
     def _send_cmd(self, cmd):
         """ Send command
@@ -133,12 +131,10 @@ class M601GC(Base, ProcessInterface):
 
         self._serial_connection.write(cmd)
         res = self._read_data()
-        if type(res) == bool:
+        if isinstance(res, bool):
             return res
         else:
             return res.decode()
-
-
 
     def _read_data(self):
         in_reading = True
@@ -147,14 +143,15 @@ class M601GC(Base, ProcessInterface):
         _num_of_zero = 0
         data = b''
 
-
         while in_reading:
             res = self._serial_connection.read(1)
 
             if res == b'\x00' or res == b'':
                 _num_of_zero += 1
                 if _num_of_zero >= self.CMD_ZERO_NUM:
-                    self.log.error( self.__class__.__name__ + '> Communication Error: This hardware might be off!' )
+                    self.log.error(
+                        self.__class__.__name__ +
+                        '> Communication Error: This hardware might be off!')
                     return False
             elif res == self.STX:
                 in_resiving_data = True
@@ -165,6 +162,4 @@ class M601GC(Base, ProcessInterface):
                     in_reading = False
                 data += res
 
-
         return data
-

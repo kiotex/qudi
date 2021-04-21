@@ -37,10 +37,63 @@ from interface.slow_counter_interface import SlowCounterInterface
 from interface.slow_counter_interface import SlowCounterConstraints
 from interface.slow_counter_interface import CountingMode
 
+from interface.data_instream_interface import DataInStreamInterface, DataInStreamConstraints
+from interface.data_instream_interface import StreamingMode, StreamChannelType, StreamChannel
+
 
 class ProcessMode(Enum):
     Control = "ProcessControlInterface"
     Process = "ProcessInterface"
+
+
+class InterfaceMode(Enum):
+    DataInStream = "DataInStreamInterface"
+    SlowCounter = "SlowCounterInterface"
+
+
+class MixedConstraints(SlowCounterConstraints, DataInStreamConstraints):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._digital_channels = digital_channels
+        self._analog_channels = analog_channels
+
+        # ==== SlowCounterConstraints ====
+        # from slow_counter_dummy
+        self.min_count_frequency = 5e-5
+        self.max_count_frequency = 5e5
+        self.counting_mode = [
+            CountingMode.CONTINUOUS,
+            CountingMode.GATED,
+            CountingMode.FINITE_GATED]
+        # ==== End SlowCounterConstraints ====
+
+        # ==== DataInStreamConstraints ====
+        # from data_instream_dummy
+        self.analog_sample_rate.min = 1
+        self.analog_sample_rate.max = 2**31 - 1
+        self.analog_sample_rate.step = 1
+        self.analog_sample_rate.unit = 'Hz'
+        self.digital_sample_rate.min = 1
+        self.digital_sample_rate.max = 2**31 - 1
+        self.digital_sample_rate.step = 1
+        self.digital_sample_rate.unit = 'Hz'
+        self.combined_sample_rate = self.analog_sample_rate
+
+        self.read_block_size.min = 1
+        self.read_block_size.max = 1000000
+        self.read_block_size.step = 1
+
+        # TODO: Implement FINITE streaming mode
+        self.streaming_modes = (
+            StreamingMode.CONTINUOUS,
+        )  # , StreamingMode.FINITE)
+        self.data_type = np.float64
+        self.allow_circular_buffer = True
+        # ==== End DataInStreamConstraints ====
+
+    def copy(self):
+        return MixedConstraints(**vars(self))
 
 
 class ProcessInterfaceAdapter(
@@ -48,7 +101,9 @@ class ProcessInterfaceAdapter(
         ProcessInterface,
         ProcessControlInterface,
         SimpleDataInterface,
-        SlowCounterInterface):
+        SlowCounterInterface,
+        # DataInStreamInterface
+):
     """ This interfuse can be used to modify a process control on the fly. It needs a 2D array to interpolate
 
     TODO: docstringを書き直す
@@ -72,12 +127,67 @@ class ProcessInterfaceAdapter(
         else:
             self.log.error("No process interface is assigned")
 
+        self._init_constraints()
+
     def on_deactivate(self):
         """ Deactivate module.
         """
         pass
 
+    def _init_constraints(self):
+        self._constraints = MixedConstraints()
+
+        self.analog_channels = list()
+        self.analog_units = list()
+
+        if hasattr(self.hardware, "get_counter_channels"):
+            self.analog_channels = self.hardware.get_counter_channels()
+            if hasattr(self.hardware, "get_counter_units"):
+                self.analog_units = self.hardware.get_counter_units()
+            elif hasattr(self.hardware, "get_units"):
+                self.analog_units = self.hardware.get_units()
+            else:
+                if hasattr(self.hardware, "get_process_unit"):
+                    unit, _ = self.hardware.get_process_unit()
+                    self.analog_units, _ = [unit] * len(self.analog_channels)
+                elif hasattr(self.hardware, "get_control_unit"):
+                    unit, _ = self.hardware.get_control_unit()
+                    self.analog_units, _ = [unit] * len(self.analog_channels)
+                else:
+                    self.analog_units, _ = [
+                        "Unknown unit"] * len(self.analog_channels)
+
+        else:
+            if hasattr(self.hardware, "get_process_value"):
+                self.analog_channels += [
+                    f'PV_{i}' for i in range(
+                        self.process_get_number_channels())]
+                unit, _ = self.hardware.get_process_unit()
+                self.analog_units, _ = [unit] * \
+                    self.process_get_number_channels()
+
+            if hasattr(self.hardware, "get_control_value"):
+                self.analog_channels += [
+                    f'SV_{i}' for i in range(
+                        self.process_control_get_number_channels())]
+                unit, _ = self.hardware.get_control_unit()
+                self.analog_units, _ = [unit] * \
+                    self.process_control_get_number_channels()
+
+        self._constraints.analog_channels = tuple(
+            StreamChannel(
+                name=ch, type=StreamChannelType.ANALOG, unit=unit) for ch, unit in zip(
+                self.analog_channels, self.analog_units))
+
+    def get_constraints(self):
+        """ Return the constraints on the settings for this hardware.
+
+        @return (MixedConstraints): Instance of MixedConstraints containing constraints
+        """
+        return self._constraints.copy()
+
     # ================ ProcessInterface Commands =======================
+
     def get_process_value(self, channel=None):
         """ Return a measured value
 
@@ -184,21 +294,6 @@ class ProcessInterfaceAdapter(
 
     # ================ SlowCounterInterface Commands =======================
 
-    def get_constraints(self):
-        """ Retrieve the hardware constrains from the counter device.
-
-        @return (SlowCounterConstraints): object with constraints for the counter
-        """
-        constraints = SlowCounterConstraints()
-        constraints.min_count_frequency = 5e-5
-        constraints.max_count_frequency = 5e5
-        constraints.counting_mode = [
-            CountingMode.CONTINUOUS,
-            CountingMode.GATED,
-            CountingMode.FINITE_GATED]
-
-        return constraints
-
     def get_counter(self, samples=1):
         """ Returns the current counts per second of the counter.
 
@@ -228,20 +323,7 @@ class ProcessInterfaceAdapter(
 
         Most methods calling this might just care about the number of channels, though.
         """
-        if hasattr(self.hardware, "get_counter_channels"):
-            return self.hardware.get_counter_channels()
-
-        ret = list()
-
-        if hasattr(self.hardware, "get_process_value"):
-            ret += [f'PV_{i}'
-                    for i in range(self.process_get_number_channels())]
-
-        if hasattr(self.hardware, "get_control_value"):
-            ret += [f'SV_{i}'
-                    for i in range(self.process_control_get_number_channels())]
-
-        return ret
+        return self.analog_channels
 
     def set_up_clock(self, clock_frequency=None, clock_channel=None):
         """ Set the frequency of the counter by configuring the hardware clock
@@ -249,8 +331,6 @@ class ProcessInterfaceAdapter(
         @param (float) clock_frequency: if defined, this sets the frequency of the clock
         @param (string) clock_channel: if defined, this is the physical channel of the clock
         @return int: error code (0:OK, -1:error)
-
-        TODO: Should the logic know about the different clock channels ?
         """
         return 0
 
@@ -289,8 +369,6 @@ class ProcessInterfaceAdapter(
         """ Closes the clock and cleans up afterwards.
 
         @return int: error code (0:OK, -1:error)
-
-        TODO: This method is very hardware specific, it should be deprecated
         """
         return 0
 
@@ -301,7 +379,7 @@ class ProcessInterfaceAdapter(
     def getData(self):
         """ Return a measured value
 
-        logic側がfloat型で受け付ける形になっているため、PV(優先), SVの片方を帰す
+        NOTE: logic側がfloat型で受け付ける形になっているため、PV(優先), SVの片方を帰す
         """
         if hasattr(self.hardware, "get_process_value"):
             return self.get_process_value(channel=0)
@@ -313,3 +391,41 @@ class ProcessInterfaceAdapter(
         return 1
 
     # ================ End SimpleDataInterface Commands ==================
+
+    # ================ DataInStreamInterface Commands =======================
+
+    def read_data(self, number_of_samples=1):
+        """
+        Read data from the stream buffer into a 2D numpy array and return it.
+        The arrays first index corresponds to the channel number and the second index serves as
+        sample index:
+            return_array.shape == (self.number_of_channels, number_of_samples)
+        The numpy arrays data type is the one defined in self.data_type.
+        If number_of_samples is omitted all currently available samples are read from buffer.
+
+        This method will not return until all requested samples have been read or a timeout occurs.
+
+        If no samples are available, this method will immediately return an empty array.
+        You can check for a failed data read if number_of_samples != <return_array>.shape[1].
+
+        @param int number_of_samples: optional, number of samples to read per channel. If omitted, all available samples are read from buffer.
+
+        @return numpy.ndarray: The read samples in a numpy array
+        """
+        return self.get_counter(number_of_samples)
+
+    def read_single_point(self):
+        """
+        This method will initiate a single sample read on each configured data channel.
+        In general this sample may not be acquired simultaneous for all channels and timing in
+        general can not be assured. Us this method if you want to have a non-timing-critical
+        snapshot of your current data channel input.
+        May not be available for all devices.
+        The returned 1D numpy array will contain one sample for each channel.
+
+        @return numpy.ndarray: 1D array containing one sample for each channel. Empty array
+                               indicates error.
+        """
+        return self.get_counter(1).transpose()[0]
+
+    # ================ End DataInStreamInterface Commands =====================

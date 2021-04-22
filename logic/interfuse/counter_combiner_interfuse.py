@@ -22,6 +22,8 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 """
 import numpy as np
 
+from concurrent.futures import ThreadPoolExecutor
+
 from core.connector import Connector
 from core.configoption import ConfigOption
 from core.statusvariable import StatusVar
@@ -40,6 +42,7 @@ class CounterCombinerInterfuse(
 
     """
 
+    counters_num = 4
     _counter0 = Connector(interface='SlowCounterInterface')
     _counter1 = Connector(interface='SlowCounterInterface', optional=True)
     _counter2 = Connector(interface='SlowCounterInterface', optional=True)
@@ -53,15 +56,18 @@ class CounterCombinerInterfuse(
         """for _counter in self._counters:
             if _counter.is_connected:
                 self.counters.append(_counter())"""
-        for i in range(4):
+        for i in range(self.counters_num):
             _counter = getattr(self, f"_counter{i}")
             if _counter.is_connected:
                 self.counters.append(_counter())
+        self.counters_num = len(self.counters)  # 有効なカウンター数に更新
+
+        self.executor = ThreadPoolExecutor(max_workers=self.counters_num)
 
     def on_deactivate(self):
         """ Deactivate module.
         """
-        pass
+        self.executor.shutdown()
 
     def get_counter(self, samples=1):
         """ Returns the current counts per second of the counter.
@@ -70,12 +76,15 @@ class CounterCombinerInterfuse(
 
         @return numpy.array((n, uint32)): the measured quantity of each channel
         """
-        ret = self.counters[0].get_counter(samples)
+        futures = []
 
-        for i in range(1, len(self.counters)):
-            ret = np.vstack((ret, self.counters[i].get_counter(samples)))
+        for i in range(self.counters_num):
+            future = self.executor.submit(
+                self.counters[i].get_counter, samples)
+            futures.append(future)
 
-        return ret
+        results = list(map(lambda x: x.result(), futures))
+        return np.vstack(results)
 
     def get_counter_channels(self):
         """ Returns the list of counter channel names.
@@ -95,6 +104,8 @@ class CounterCombinerInterfuse(
         """ Retrieve the hardware constrains from the counter device.
 
         @return (SlowCounterConstraints): object with constraints for the counter
+
+        # TODO: 複数のcounterの情報を統合すべき
         """
         return self.counters[0].get_constraints()
 
@@ -104,10 +115,12 @@ class CounterCombinerInterfuse(
         @param (float) clock_frequency: if defined, this sets the frequency of the clock
         @param (string) clock_channel: if defined, this is the physical channel of the clock
         @return int: error code (0:OK, -1:error)
-
-        TODO: Should the logic know about the different clock channels ?
         """
-        return self.counters[0].set_up_clock(clock_frequency, clock_channel)
+        ret = 0
+        for i in range(self.counters_num):
+            ret += self.counters[i].set_up_clock(
+                clock_frequency, clock_channel)
+        return ret
 
     def set_up_counter(self,
                        counter_channels=None,
@@ -131,23 +144,30 @@ class CounterCombinerInterfuse(
         they need to be given in the same order.
         All counter channels share the same clock.
         """
-        return self.counters[0].set_up_counter(counter_channels,
-                                               sources,
-                                               clock_channel,
-                                               counter_buffer)
+        ret = 0
+        for i in range(self.counters_num):
+            ret += self.counters[i].set_up_counter(counter_channels,
+                                                   sources,
+                                                   clock_channel,
+                                                   counter_buffer)
+        return ret
 
     def close_counter(self):
         """ Closes the counter and cleans up afterwards.
 
         @return int: error code (0:OK, -1:error)
         """
-        return self.counters[0].close_counter()
+        ret = 0
+        for i in range(self.counters_num):
+            ret += self.counters[i].close_counter()
+        return ret
 
     def close_clock(self):
         """ Closes the clock and cleans up afterwards.
 
         @return int: error code (0:OK, -1:error)
-
-        TODO: This method is very hardware specific, it should be deprecated
         """
-        return self.counters[0].close_clock()
+        ret = 0
+        for i in range(self.counters_num):
+            ret += self.counters[i].close_clock()
+        return ret

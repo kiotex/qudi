@@ -52,7 +52,7 @@ class DailyLogHandler(logging.FileHandler):
     """
 
     def __init__(self, base_filename, savelogic):
-        self._savelogic  = savelogic
+        self._savelogic = savelogic
         self._base_filename = base_filename
         # get current directory
         self._current_directory = savelogic.get_daily_directory()
@@ -69,8 +69,8 @@ class DailyLogHandler(logging.FileHandler):
     @property
     def filename(self):
         return os.path.join(self._current_directory,
-                time.strftime(self._base_filename,
-                    self._current_time))
+                            time.strftime(self._base_filename,
+                                          self._current_time))
 
     def emit(self, record):
         """
@@ -121,7 +121,7 @@ class SaveLogic(GenericLogic):
     A general class which saves all kinds of data in a general sense.
 
     Example config for copy-paste:
-    
+
     savelogic:
         module.Class: 'save_logic.SaveLogic'
         win_data_directory: 'C:/Data'   # DO NOT CHANGE THE DIRECTORY HERE! ONLY IN THE CUSTOM FILE!
@@ -133,7 +133,8 @@ class SaveLogic(GenericLogic):
 
     _win_data_dir = ConfigOption('win_data_directory', 'C:/Data/')
     _unix_data_dir = ConfigOption('unix_data_directory', 'Data')
-    log_into_daily_directory = ConfigOption('log_into_daily_directory', False, missing='warn')
+    log_into_daily_directory = ConfigOption(
+        'log_into_daily_directory', False, missing='warn')
     save_pdf = ConfigOption('save_pdf', False)
     save_png = ConfigOption('save_png', True)
 
@@ -142,13 +143,13 @@ class SaveLogic(GenericLogic):
         'axes.prop_cycle': cycler(
             'color',
             ['#1f17f4',
-            '#ffa40e',
-            '#ff3487',
-            '#008b00',
-            '#17becf',
-            '#850085'
-            ]
-            ) + cycler('marker', ['o', 's', '^', 'v', 'D', 'd']),
+             '#ffa40e',
+             '#ff3487',
+             '#008b00',
+             '#17becf',
+             '#850085'
+             ]
+        ) + cycler('marker', ['o', 's', '^', 'v', 'D', 'd']),
         'axes.edgecolor': '0.3',
         'xtick.color': '0.3',
         'ytick.color': '0.3',
@@ -163,7 +164,7 @@ class SaveLogic(GenericLogic):
         'xtick.minor.visible': True,
         'ytick.minor.visible': True,
         'savefig.dpi': '180'
-        }
+    }
 
     # Matplotlib style definition for saving plots
     # Better than the default!
@@ -215,10 +216,10 @@ class SaveLogic(GenericLogic):
 
         # start logging into daily directory?
         if not isinstance(self.log_into_daily_directory, bool):
-                self.log.warning(
-                    'log entry in configuration is not a '
-                    'boolean. Falling back to default setting: False.')
-                self.log_into_daily_directory = False
+            self.log.warning(
+                'log entry in configuration is not a '
+                'boolean. Falling back to default setting: False.')
+            self.log_into_daily_directory = False
 
         self._daily_loghandler = None
 
@@ -228,7 +229,7 @@ class SaveLogic(GenericLogic):
         if self.log_into_daily_directory:
             # adds a log handler for logging into daily directory
             self._daily_loghandler = DailyLogHandler(
-                    '%Y%m%d-%Hh%Mm%Ss-qudi.log', self)
+                '%Y%m%d-%Hh%Mm%Ss-qudi.log', self)
             self._daily_loghandler.setFormatter(logging.Formatter(
                 '%(asctime)s %(name)s %(levelname)s: %(message)s',
                 datefmt='%Y-%m-%d %H:%M:%S'))
@@ -257,8 +258,18 @@ class SaveLogic(GenericLogic):
         """
         self._daily_loghandler.setLevel(level)
 
-    def save_data(self, data, filepath=None, parameters=None, filename=None, filelabel=None,
-                  timestamp=None, filetype='text', fmt='%.15e', delimiter='\t', plotfig=None):
+    def save_data(
+            self,
+            data,
+            filepath=None,
+            parameters=None,
+            filename=None,
+            filelabel=None,
+            timestamp=None,
+            filetype='text',
+            fmt='%.15e',
+            delimiter='\t',
+            plotfig=None):
         """
         General save routine for data.
 
@@ -355,7 +366,8 @@ class SaveLogic(GenericLogic):
             timestamp = datetime.datetime.now()
 
         # Try to cast data array into numpy.ndarray if it is not already one
-        # Also collect information on arrays in the process and do sanity checks
+        # Also collect information on arrays in the process and do sanity
+        # checks
         found_1d = False
         found_2d = False
         multiple_dtypes = False
@@ -368,9 +380,12 @@ class SaveLogic(GenericLogic):
             if not isinstance(data[keyname], np.ndarray):
                 try:
                     data[keyname] = np.array(data[keyname])
-                except:
-                    self.log.error('Casting data array of type "{0}" into numpy.ndarray failed. '
-                                   'Could not save data.'.format(type(data[keyname])))
+                except BaseException:
+                    self.log.error(
+                        'Casting data array of type "{0}" into numpy.ndarray failed. '
+                        'Could not save data.'.format(
+                            type(
+                                data[keyname])))
                     return -1
 
             # determine dimensions
@@ -388,7 +403,8 @@ class SaveLogic(GenericLogic):
                     found_1d = True
                     max_row_num += 1
             else:
-                self.log.error('Found data array with dimension >2. Unable to save data.')
+                self.log.error(
+                    'Found data array with dimension >2. Unable to save data.')
                 return -1
 
             # determine array data types
@@ -399,9 +415,10 @@ class SaveLogic(GenericLogic):
 
         # Raise error if data contains a mixture of 1D and 2D arrays
         if found_2d and found_1d:
-            self.log.error('Passed data dictionary contains 1D AND 2D arrays. This is not allowed. '
-                           'Either fit all data arrays into a single 2D array or pass multiple 1D '
-                           'arrays only. Saving data failed!')
+            self.log.error(
+                'Passed data dictionary contains 1D AND 2D arrays. This is not allowed. '
+                'Either fit all data arrays into a single 2D array or pass multiple 1D '
+                'arrays only. Saving data failed!')
             return -1
 
         # try to trace back the functioncall to the class which was calling it.
@@ -411,7 +428,7 @@ class SaveLogic(GenericLogic):
             mod = inspect.getmodule(frm[0])
             # that will extract the name of the class.
             module_name = mod.__name__.split('.')[-1]
-        except:
+        except BaseException:
             # Sometimes it is not possible to get the object which called the save_data function
             # (such as when calling this from the console).
             module_name = 'UNSPECIFIED'
@@ -421,31 +438,36 @@ class SaveLogic(GenericLogic):
             filepath = self.get_path_for_module(module_name)
         elif not os.path.exists(filepath):
             os.makedirs(filepath)
-            self.log.info('Custom filepath does not exist. Created directory "{0}"'
-                          ''.format(filepath))
+            self.log.info(
+                'Custom filepath does not exist. Created directory "{0}"'
+                ''.format(filepath))
 
         # create filelabel if none has been passed
         if filelabel is None:
             filelabel = module_name
         if self.active_poi_name != '':
-            filelabel = self.active_poi_name.replace(' ', '_') + '_' + filelabel
+            filelabel = self.active_poi_name.replace(
+                ' ', '_') + '_' + filelabel
 
         # determine proper unique filename to save if none has been passed
         if filename is None:
-            filename = timestamp.strftime('%Y%m%d-%H%M-%S' + '_' + filelabel + '.dat')
+            filename = timestamp.strftime(
+                '%Y%m%d-%H%M-%S' + '_' + filelabel + '.dat')
 
         # Check format specifier.
         if not isinstance(fmt, str) and len(fmt) != len(data):
-            self.log.error('Length of list of format specifiers and number of data items differs. '
-                           'Saving not possible. Please pass exactly as many format specifiers as '
-                           'data arrays.')
+            self.log.error(
+                'Length of list of format specifiers and number of data items differs. '
+                'Saving not possible. Please pass exactly as many format specifiers as '
+                'data arrays.')
             return -1
 
         # Create header string for the file
-        header = 'Saved Data from the class {0} on {1}.\n' \
-                 ''.format(module_name, timestamp.strftime('%d.%m.%Y at %Hh%Mm%Ss'))
+        header = 'Saved Data from the class {0} on {1}.\n' ''.format(
+            module_name, timestamp.strftime('%d.%m.%Y at %Hh%Mm%Ss'))
         header += '\nParameters:\n===========\n\n'
-        # Include the active POI name (if not empty) as a parameter in the header
+        # Include the active POI name (if not empty) as a parameter in the
+        # header
         if self.active_poi_name != '':
             header += 'Measured at POI: {0}\n'.format(self.active_poi_name)
         # add the parameters if specified:
@@ -459,10 +481,12 @@ class SaveLogic(GenericLogic):
                         header += '{0}: {1:.16e}\n'.format(entry, param)
                     else:
                         header += '{0}: {1}\n'.format(entry, param)
-            # make a hardcore string conversion and try to save the parameters directly:
+            # make a hardcore string conversion and try to save the parameters
+            # directly:
             else:
-                self.log.error('The parameters are not passed as a dictionary! The SaveLogic will '
-                               'try to save the parameters nevertheless.')
+                self.log.error(
+                    'The parameters are not passed as a dictionary! The SaveLogic will '
+                    'try to save the parameters nevertheless.')
                 header += 'not specified parameters: {0}\n'.format(parameters)
         header += '\nData:\n=====\n'
 
@@ -475,8 +499,8 @@ class SaveLogic(GenericLogic):
             if len(data) != 1:
                 identifier_str = ''
                 if multiple_dtypes:
-                    field_dtypes = list(zip(['f{0:d}'.format(i) for i in range(len(arr_dtype))],
-                                            arr_dtype))
+                    field_dtypes = list(
+                        zip(['f{0:d}'.format(i) for i in range(len(arr_dtype))], arr_dtype))
                     new_array = np.empty(max_line_num, dtype=field_dtypes)
                     for i, keyname in enumerate(data):
                         identifier_str += keyname + delimiter
@@ -489,7 +513,8 @@ class SaveLogic(GenericLogic):
                             else:
                                 new_array[field][length:] = np.nan
                 else:
-                    new_array = np.empty([max_line_num, max_row_num], arr_dtype[0])
+                    new_array = np.empty(
+                        [max_line_num, max_row_num], arr_dtype[0])
                     for i, keyname in enumerate(data):
                         identifier_str += keyname + delimiter
                         length = data[keyname].size
@@ -503,29 +528,49 @@ class SaveLogic(GenericLogic):
                 data = {identifier_str: new_array}
             elif found_2d:
                 keyname = list(data.keys())[0]
-                identifier_str = keyname.replace(', ', delimiter).replace(',', delimiter)
+                identifier_str = keyname.replace(
+                    ', ', delimiter).replace(
+                    ',', delimiter)
                 data[identifier_str] = data.pop(keyname)
             else:
                 identifier_str = list(data)[0]
             header += list(data)[0]
-            self.save_array_as_text(data=data[identifier_str], filename=filename, filepath=filepath,
-                                    fmt=fmt, header=header, delimiter=delimiter, comments='#',
-                                    append=False)
+            self.save_array_as_text(
+                data=data[identifier_str],
+                filename=filename,
+                filepath=filepath,
+                fmt=fmt,
+                header=header,
+                delimiter=delimiter,
+                comments='#',
+                append=False)
         # write npz file and save parameters in textfile
         elif filetype == 'npz':
             header += str(list(data.keys()))[1:-1]
             np.savez_compressed(filepath + '/' + filename[:-4], **data)
-            self.save_array_as_text(data=[], filename=filename[:-4]+'_params.dat', filepath=filepath,
-                                    fmt=fmt, header=header, delimiter=delimiter, comments='#',
+            self.save_array_as_text(data=[],
+                                    filename=filename[:-4] + '_params.dat',
+                                    filepath=filepath,
+                                    fmt=fmt,
+                                    header=header,
+                                    delimiter=delimiter,
+                                    comments='#',
                                     append=False)
         else:
-            self.log.error('Only saving of data as textfile and npz-file is implemented. Filetype "{0}" is not '
-                           'supported yet. Saving as textfile.'.format(filetype))
-            self.save_array_as_text(data=data[identifier_str], filename=filename, filepath=filepath,
-                                    fmt=fmt, header=header, delimiter=delimiter, comments='#',
-                                    append=False)
+            self.log.error(
+                'Only saving of data as textfile and npz-file is implemented. Filetype "{0}" is not '
+                'supported yet. Saving as textfile.'.format(filetype))
+            self.save_array_as_text(
+                data=data[identifier_str],
+                filename=filename,
+                filepath=filepath,
+                fmt=fmt,
+                header=header,
+                delimiter=delimiter,
+                comments='#',
+                append=False)
 
-        #--------------------------------------------------------------------------------------------
+        # --------------------------------------------------------------------------------------------
         # Save thumbnail figure of plot
         if plotfig is not None:
             # create Metadata
@@ -541,10 +586,11 @@ class SaveLogic(GenericLogic):
             else:
                 metadata['CreationDate'] = time
                 metadata['ModDate'] = time
-            
+
             if self.save_pdf:
                 # determine the PDF-Filename
-                fig_fname_vector = os.path.join(filepath, filename)[:-4] + '_fig.pdf'
+                fig_fname_vector = os.path.join(filepath, filename)[
+                    :-4] + '_fig.pdf'
 
                 # Create the PdfPages object to which we will save the pages:
                 # The with statement makes sure that the PdfPages object is closed properly at
@@ -552,23 +598,30 @@ class SaveLogic(GenericLogic):
                 with PdfPages(fig_fname_vector) as pdf:
                     pdf.savefig(plotfig, bbox_inches='tight', pad_inches=0.05)
 
-                    # We can also set the file's metadata via the PdfPages object:
+                    # We can also set the file's metadata via the PdfPages
+                    # object:
                     pdf_metadata = pdf.infodict()
                     for x in metadata:
                         pdf_metadata[x] = metadata[x]
 
             if self.save_png:
                 # determine the PNG-Filename and save the plain PNG
-                fig_fname_image = os.path.join(filepath, filename)[:-4] + '_fig.png'
-                plotfig.savefig(fig_fname_image, bbox_inches='tight', pad_inches=0.05)
+                fig_fname_image = os.path.join(filepath, filename)[
+                    :-4] + '_fig.png'
+                plotfig.savefig(
+                    fig_fname_image,
+                    bbox_inches='tight',
+                    pad_inches=0.05)
 
                 # Use Pillow (an fork for PIL) to attach metadata to the PNG
                 png_image = Image.open(fig_fname_image)
                 png_metadata = PngImagePlugin.PngInfo()
 
                 # PIL can only handle Strings, so let's convert our times
-                metadata['CreationDate'] = metadata['CreationDate'].strftime('%Y%m%d-%H%M-%S')
-                metadata['ModDate'] = metadata['ModDate'].strftime('%Y%m%d-%H%M-%S')
+                metadata['CreationDate'] = metadata['CreationDate'].strftime(
+                    '%Y%m%d-%H%M-%S')
+                metadata['ModDate'] = metadata['ModDate'].strftime(
+                    '%Y%m%d-%H%M-%S')
 
                 for x in metadata:
                     # make sure every value of the metadata is a string
@@ -583,11 +636,21 @@ class SaveLogic(GenericLogic):
 
             # close matplotlib figure
             plt.close(plotfig)
-            self.log.debug('Time needed to save data: {0:.2f}s'.format(time.time()-start_time))
-            #----------------------------------------------------------------------------------
+            self.log.debug(
+                'Time needed to save data: {0:.2f}s'.format(
+                    time.time() - start_time))
+            # ----------------------------------------------------------------------------------
 
-    def save_array_as_text(self, data, filename, filepath='', fmt='%.15e', header='',
-                           delimiter='\t', comments='#', append=False):
+    def save_array_as_text(
+            self,
+            data,
+            filename,
+            filepath='',
+            fmt='%.15e',
+            header='',
+            delimiter='\t',
+            comments='#',
+            append=False):
         """
         An Independent method, which can save a 1D or 2D numpy.ndarray as textfile.
         Can append to files.
@@ -595,12 +658,22 @@ class SaveLogic(GenericLogic):
         # write to file. Append if requested.
         if append:
             with open(os.path.join(filepath, filename), 'ab') as file:
-                np.savetxt(file, data, fmt=fmt, delimiter=delimiter, header=header,
-                           comments=comments)
+                np.savetxt(
+                    file,
+                    data,
+                    fmt=fmt,
+                    delimiter=delimiter,
+                    header=header,
+                    comments=comments)
         else:
             with open(os.path.join(filepath, filename), 'wb') as file:
-                np.savetxt(file, data, fmt=fmt, delimiter=delimiter, header=header,
-                           comments=comments)
+                np.savetxt(
+                    file,
+                    data,
+                    fmt=fmt,
+                    delimiter=delimiter,
+                    header=header,
+                    comments=comments)
         return
 
     def get_daily_directory(self):
@@ -617,17 +690,18 @@ class SaveLogic(GenericLogic):
         returned.
         """
         current_dir = os.path.join(
-            self.data_dir, 
-            time.strftime("%Y"), 
+            self.data_dir,
+            time.strftime("%Y"),
             time.strftime("%m"),
             time.strftime("%Y%m%d"))
 
         if not os.path.isdir(current_dir):
             self.log.info("Creating directory for today's data:\n"
-                    '{0}'.format(current_dir))
+                          '{0}'.format(current_dir))
 
             # The exist_ok=True is necessary here to prevent Error 17 "File Exists"
-            # Details at http://stackoverflow.com/questions/12468022/python-fileexists-error-when-making-directory
+            # Details at
+            # http://stackoverflow.com/questions/12468022/python-fileexists-error-when-making-directory
             os.makedirs(current_dir, exist_ok=True)
 
         return current_dir
@@ -664,8 +738,9 @@ class SaveLogic(GenericLogic):
             param_dict = args[0]
             param_dict.update(kwargs)
         else:
-            raise TypeError('"update_additional_parameters" takes exactly 0 or 1 positional '
-                            'argument of type dict.')
+            raise TypeError(
+                '"update_additional_parameters" takes exactly 0 or 1 positional '
+                'argument of type dict.')
 
         for key in param_dict.keys():
             param_dict[key] = netobtain(param_dict[key])
@@ -680,4 +755,3 @@ class SaveLogic(GenericLogic):
         """
         self._additional_parameters.pop(key, None)
         return
-

@@ -426,8 +426,8 @@ class InStreamDummy(Base, DataInStreamInterface):
                 self.active_channels = active_channels
 
             # Handle total number of samples
-            if stream_length is not None:
-                self.stream_length = stream_length
+            # if stream_length is not None:
+            #    self.stream_length = stream_length
 
             # Handle buffer size
             if buffer_size is not None:

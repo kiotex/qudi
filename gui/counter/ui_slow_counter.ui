@@ -244,8 +244,8 @@
      <item>
       <widget class="QLabel" name="label_3">
        <property name="toolTip">
-        <string>If bigger than 1, the number of samples is averaged over the given number and then displayed. 
-Use for extremely fast counting, since all the raw data is saved. 
+        <string>If bigger than 1, the number of samples is averaged over the given number and then displayed.
+Use for extremely fast counting, since all the raw data is saved.
 Timestamps in oversampling interval are all equal to the averaging time.</string>
        </property>
        <property name="text">
@@ -256,8 +256,8 @@ Timestamps in oversampling interval are all equal to the averaging time.</string
      <item>
       <widget class="QSpinBox" name="oversampling_SpinBox">
        <property name="toolTip">
-        <string>If bigger than 1, the number of samples is averaged over the given number and then displayed. 
-Use for extremely fast counting, since all the raw data is saved. 
+        <string>If bigger than 1, the number of samples is averaged over the given number and then displayed.
+Use for extremely fast counting, since all the raw data is saved.
 Timestamps in oversampling interval are all equal to the averaging time.</string>
        </property>
        <property name="minimum">
@@ -313,7 +313,7 @@ Timestamps in oversampling interval are all equal to the averaging time.</string
    <property name="icon">
     <iconset>
      <normaloff>../../artwork/icons/qudiTheme/22x22/record-counter.png</normaloff>
-     <activeon>../../artwork/icons/qudiTheme/22x22/stop-counter.png</activeon>../../artwork/icons/qudiTheme/22x22/record-counter.png</iconset>
+     <activeon>../../artwork/icons/qudiTheme/22x22/stop-record-counter.png</activeon>../../artwork/icons/qudiTheme/22x22/record-counter.png</iconset>
    </property>
    <property name="text">
     <string>Record counts</string>

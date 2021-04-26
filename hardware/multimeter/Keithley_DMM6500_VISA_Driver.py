@@ -33,9 +33,9 @@ class DMM6500:
             doClear):
         self.myInstr = rsrcMgr.open_resource(rsrcString)
         if doIdQuery == 1:
-            print(self.QueryCmd("*IDN?"))
+            print(self.IDQuery())
         if doReset == 1:
-            self.SendCmd("reset()")
+            self.Reset()
         if doClear == 1:
             self.myInstr.clear()
         #self.myInstr.read_termination = '\n'

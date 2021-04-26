@@ -24,6 +24,9 @@ import numpy as np
 import os
 import pyqtgraph as pg
 
+import debugpy
+debugpy.debug_this_thread()
+
 from core.connector import Connector
 from gui.colordefs import QudiPalettePale as palette
 from gui.guibase import GUIBase
@@ -71,6 +74,8 @@ class CounterGui(GUIBase):
         # Configuring the dock widgets
         # Use the inherited class 'CounterMainWindow' to create the GUI window
         self._mw = CounterMainWindow()
+
+        self._mw.setWindowTitle(self._mw.windowTitle() + ' [' + self._counting_logic._counting_device._name + ']')
 
         # Setup dock widgets
         self._mw.centralwidget.hide()
@@ -120,7 +125,13 @@ class CounterGui(GUIBase):
         self._mw.count_freq_SpinBox.setValue(self._counting_logic.get_count_frequency())
         self._mw.oversampling_SpinBox.setValue(self._counting_logic.get_counting_samples())
         self._display_trace = 1
-        self._trace_selection = [True, True, True, True]
+
+        self.counter_channels = len(self._counting_logic.get_channels())
+        if self.counter_channels <= 4:
+            self._trace_selection = [True, True, True, True]
+        else:
+            self._trace_selection = [True] * self.counter_channels
+
 
         #####################
         # Connecting user interactions

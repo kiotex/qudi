@@ -28,6 +28,7 @@ from interface.process_control_interface import ProcessControlInterface
 import serial
 import time
 
+
 class ATC204(Base, ProcessInterface, ProcessControlInterface):
     """ Methods to control Arios ATC-204(東邦電子 TTM-204).
     https://dia-pe-titech.esa.io/posts/158
@@ -39,162 +40,151 @@ class ATC204(Base, ProcessInterface, ProcessControlInterface):
         port: 'COM4'
         baudrate: 9600
         timeout: 100
-        
+
         limit_min: 0    # Pa
         limit_max: 40e3 # Pa
     """
-    
-    
+
     _port = ConfigOption('port')
     _baudrate = ConfigOption('baudrate', 9600, missing='warn')
     _timeout = ConfigOption('timeout', 10, missing='warn')
-    
+
     _limit_min = ConfigOption('limit_min', 0, missing='warn')
     _limit_max = ConfigOption('limit_max', 40e3, missing='warn')
-    
+
     CMD_RETRY_NUM = 10
     CMD_ZERO_NUM = 10
-    
+
     STX = b'\x02'
     ETX = b'\x03'
-    
+
     def on_activate(self):
         """ Activate module.
         """
         self._serial_connection = serial.Serial(
-            port=self._port, 
+            port=self._port,
             baudrate=self._baudrate,
-            bytesize=serial.EIGHTBITS, 
-            parity=serial.PARITY_NONE, 
-            stopbits=serial.STOPBITS_TWO, 
+            bytesize=serial.EIGHTBITS,
+            parity=serial.PARITY_NONE,
+            stopbits=serial.STOPBITS_TWO,
             timeout=self._timeout)
-        
+
         self._openflag = self._serial_connection.is_open
         if not(self._openflag):
             self._serial_connection.open()
-        
+
         # なぜか初期値が0.2になってしまうのでリセット
         if self.get_control_value() == .2e3:
-            self.set_control_value( 0.0 )
+            self.set_control_value(0.0)
 
     def on_deactivate(self):
         """ Deactivate module.
         """
         if not(self._openflag):
-           self._serial_connection.close()
+            self._serial_connection.close()
 
-
-    def get_process_unit(self):
+    def get_process_unit(self, channel=None):
         """ Process unit, here Pa.
 
             @return float: process unit
         """
         return 'Pa', 'pascal'
 
-    def get_control_unit(self):
+    def get_control_unit(self, channel=None):
         """ Get unit of control value.
 
             @return tuple(str): short and text unit of control value
         """
         return 'Pa', 'pascal'
 
-    def get_control_limit(self):
+    def get_control_limit(self, channel=None):
         """ Get minimum and maximum of control value.
 
             @return tuple(float, float): minimum and maximum of control value
         """
         return self._limit_min, self._limit_max
 
-
     def get_minimal_step(self):
         return 100.0
 
-
-
-
-    def get_process_value(self):
+    def get_process_value(self, channel=None):
         """ Process value, here temperature.
 
             @return float: process value
         """
-        return self._send_cmd('01RPV1')*1e3
+        return self._send_cmd('01RPV1') * 1e3
 
-
-    def get_control_value(self):
+    def get_control_value(self, channel=None):
         """ Get current control value, here heating power
 
             @return float: current control value
         """
-        return self._send_cmd('01RSV1')*1e3
+        return self._send_cmd('01RSV1') * 1e3
 
-
-    def set_control_value(self, value):
+    def set_control_value(self, value, channel=None):
         """ Set control value, here heating power.
 
             @param flaot value: control value
         """
-        
-        set_value = round( value / 1e3 * 10)        
+
+        set_value = round(value / 1e3 * 10)
         cmd = '01WSV1' + str(set_value).zfill(5)
-        #'01WSV1' + '{:0=5}'.format( set_value ) でも同じ結果になる
-        
-        return self._send_cmd(cmd)*1e3
-        #print(cmd)
-        #return True
+        # '01WSV1{:0=5}'.format( set_value ) でも同じ結果になる
 
-
-
+        return self._send_cmd(cmd) * 1e3
+        # print(cmd)
+        # return True
 
     def _send_cmd(self, cmd):
         """ Send command
         """
-        
+
         cmd = self.STX + cmd.encode() + self.ETX
-        
-        bcc=0
+
+        bcc = 0
         for data in cmd:
             bcc = bcc ^ data
-        
+
         final_cmd = cmd + bytes([bcc])
-        
-        
+
         for i in range(self.CMD_RETRY_NUM):
-            #if self._serial_connection.out_waiting > 0:
+            # if self._serial_connection.out_waiting > 0:
             #    self._serial_connection.reset_output_buffer()
-            
+
             self._serial_connection.write(final_cmd)
             res = self._read_data()
-            
-            if res == False:
+
+            if not res:
                 return False
             elif res == b'\x0201\x06\x03\x06':
                 return True
             else:
                 try:
-                    return float( res[7:12].decode() )/10
+                    return float(res[7:12].decode()) / 10
                 except ValueError:
                     # clear receive buffer
                     self._serial_connection.reset_input_buffer()
                     self.log.warning('clear receive buffer')
 
-        self.log.warning('cmd res error:', res)
+        self.log.critical('cmd res error:', res)
         return False
-
 
     def _read_data(self):
         in_reading = True
         in_resiving_data = False
-        
+
         _num_of_zero = 0
         data = b''
-        
+
         while in_reading:
             res = self._serial_connection.read(1)
-            
+
             if res == b'\x00' or res == b'':
                 _num_of_zero += 1
                 if _num_of_zero >= self.CMD_ZERO_NUM:
-                    self.log.error( self.__class__.__name__ + '> Communication Error: This hardware might be off!' )
+                    self.log.error(
+                        self.__class__.__name__ +
+                        '> Communication Error: This hardware might be off!')
                     return False
             elif res == self.STX:
                 in_resiving_data = True
@@ -204,12 +194,9 @@ class ATC204(Base, ProcessInterface, ProcessControlInterface):
                     in_resiving_data = False
                     in_reading = False
                 data += res
-                    
-        
-        #BCC
+
+        # BCC
         res = self._serial_connection.read(1)
         data += res
-        
+
         return data
-
-

@@ -33,6 +33,7 @@ from core.util.mutex import Mutex
 from core.util.units import ScaledFloat
 from interface.data_instream_interface import StreamChannelType, StreamingMode
 
+import debugpy
 
 class TimeSeriesReaderLogic(GenericLogic):
     """
@@ -101,6 +102,9 @@ class TimeSeriesReaderLogic(GenericLogic):
         # Store references to connected modules
         self._streamer = self._streamer_con()
         self._savelogic = self._savelogic_con()
+
+        debugpy.debug_this_thread()
+
 
         # Flag to stop the loop and process variables
         self._stop_requested = True

@@ -49,42 +49,42 @@ class ProcessDummy(Base, ProcessInterface, ProcessControlInterface):
         """
         pass
 
-    def get_process_value(self):
+    def get_process_value(self, channel=None):
         """ Process value, here temperature.
 
             @return float: process value
         """
         return self.temperature
 
-    def get_process_unit(self):
+    def get_process_unit(self, channel=None):
         """ Process unit, here kelvin.
 
             @return float: process unit
         """
         return 'K', 'kelvin'
 
-    def set_control_value(self, value):
+    def set_control_value(self, value, channel=None):
         """ Set control value, here heating power.
 
             @param flaot value: control value
         """
         self.pwmpower = value
 
-    def get_control_value(self):
+    def get_control_value(self, channel=None):
         """ Get current control value, here heating power
 
             @return float: current control value
         """
         return self.pwmpower
 
-    def get_control_unit(self):
+    def get_control_unit(self, channel=None):
         """ Get unit of control value.
 
             @return tuple(str): short and text unit of control value
         """
         return '%', 'percent'
 
-    def get_control_limit(self):
+    def get_control_limit(self, channel=None):
         """ Get minimum and maximum of control value.
 
             @return tuple(float, float): minimum and maximum of control value

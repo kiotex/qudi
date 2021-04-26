@@ -20,30 +20,33 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 """
 
 import numpy as np
+
 import visa
+from hardware.multimeter.Keithlay_DMM6500 import DMM6500
 
 from core.module import Base
 from core.configoption import ConfigOption
 from interface.process_interface import ProcessInterface
 
 
-class Agilent3441XA(
+class Keithlay_DMM6500(
         Base,
         ProcessInterface):
-    """ Hardware control file for Agilent Devices.
+    """ Hardware control file for Keithlay DMM6500 Devices.
 
-    The hardware file was tested using the model Agilent 34410A.
+    The hardware file was tested using the model Keithlay DMM6500.
 
-    Agilent34410A:
-        module.Class: 'agilent3441XA.Agilent3441XA'
-        usb_address: 'USB0::0x0957::0x0607::my47019114::0::INSTR'
-        usb_timeout: 100 # in seconds
+    Keithlay_DMM6500:
+        module.Class: 'Keithlay_DMM6500.Keithlay_DMM6500'
+        visa_address: 'USB0::0x0957::0x0607::my47019114::0::INSTR'
+        visa_timeout: 100 # in seconds
         measurement_mode: 'dc_current' #'dc_voltage'
     """
 
     # config
-    _usb_address = ConfigOption('usb_address', missing='error')
-    _usb_timeout = ConfigOption('usb_timeout', 100, missing='warn')
+
+    _visa_address = ConfigOption('visa_address', missing='error')
+    _visa_timeout = ConfigOption('visa_timeout', 100, missing='warn')
     _measurement_mode = ConfigOption('measurement_mode', missing='error')
 
     def __init__(self, config, **kwargs):
@@ -52,44 +55,48 @@ class Agilent3441XA(
     def on_activate(self):
         """ Initialization performed during activation of the module.
         """
+        self.dmm6500 = DMM6500()
         try:
             # trying to load the visa connection to the module
             self.rm = visa.ResourceManager()
-            self._usb_connection = self.rm.open_resource(
-                resource_name=self._usb_address,
-                timeout=self._usb_timeout)
+            self.dmm6500.myInstr = self.rm.open_resource(
+                resource_name=self._visa_address,
+                timeout=self._visa_timeout)
 
-            IDN = self._usb_connection.query('*IDN?').split(',')
+            # DEBUG: ここでエラー出るかも
+            # FIXME:
+            IDN = self.dmm6500.IDQuery().split(',')
             self.model = IDN[1]
             self.log.info(
-                'Agilent3441XA> {0} {1} initialized and connected to hardware.'.format(
+                'Keithlay_DMM6500> {0} {1} initialized and connected to hardware.'.format(
                     IDN[0], IDN[1]))
 
         except BaseException:
             self.log.error(
-                'Agilent3441XA> This agilent DMM could not connect to the GPIB '
+                'Keithlay_DMM6500> This agilent DMM could not connect to the GPIB '
                 'address >>{}<<.'.format(
-                    self._usb_address))
+                    self._visa_address))
 
         if self._measurement_mode == 'dc_current':
-            self._usb_connection.query('MEAS:CURR:DC? AUTO,MAX')
+            self.dmm6500.SetMeasure_Function(self.dmm6500.MeasFunc.DCI)
+            # FIXME: レンジ等の設定を書く
             self.unit = 'A'
             self.unit_name = 'Ampere'
         elif self._measurement_mode == 'dc_voltage':
-            self._usb_connection.query('MEAS:DC? AUTO,MAX')
+            self.dmm6500.SetMeasure_Function(self.dmm6500.MeasFunc.DCV)
+            # FIXME: レンジ等の設定を書く
             self.unit = 'V'
             self.unit_name = 'Volt'
 
     def on_deactivate(self):
         """ De-initialization performed during deactivation of the module.
         """
-        self._usb_connection.close()
+        self.dmm6500.Disconnect()
         self.rm.close()
-        self.log.info('Agilent3441XA> deactivation')
+        self.log.info('Keithlay_DMM6500> deactivation')
         return
 
     # ================ ProcessInterface Commands =======================
-
     def get_process_unit(self, channel=None):
         """ Get unit of process unit.
 
@@ -102,8 +109,7 @@ class Agilent3441XA(
 
             @return float: process value
         """
-        return self._usb_connection.query('READ?')
-
+        return self.dmm6500.Measure(1)
     # ================ End ProcessInterface Commands ==================
 
     # ================ For SlowCounterInterface Commands =====================

@@ -153,7 +153,7 @@ class SpectrumLogic(GenericLogic):
             self.diff_spec_data_mod_on = np.array([])
             self.diff_spec_data_mod_off = np.array([])
 
-            self.sig_specdata_updated.emit()
+        self.sig_specdata_updated.emit()
 
     def _calculate_corrected_spectrum(self):
         self._spectrum_data_corrected = np.copy(self._spectrum_data)

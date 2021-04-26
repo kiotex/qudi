@@ -23,6 +23,7 @@ from qtpy import QtCore
 from collections import OrderedDict
 import numpy as np
 import matplotlib.pyplot as plt
+from enum import Enum
 
 from core.connector import Connector
 from core.statusvariable import StatusVar
@@ -30,6 +31,9 @@ from core.util.mutex import Mutex
 from core.util.network import netobtain
 from logic.generic_logic import GenericLogic
 
+class Mode(Enum):
+    Differential = 0
+    Continuous = 1
 
 class SpectrumLogic(GenericLogic):
 
@@ -131,24 +135,25 @@ class SpectrumLogic(GenericLogic):
     def get_single_spectrum(self, background=False):
         """ Record a single spectrum from the spectrometer.
         """
-        # Clear any previous fit
-        self.fc.clear_result()
+        with self.threadlock:
+            # Clear any previous fit
+            self.fc.clear_result()
 
-        if background:
-            self._spectrum_background = netobtain(
-                self._spectrometer_device.recordSpectrum())
-        else:
-            self._spectrum_data = netobtain(
-                self._spectrometer_device.recordSpectrum())
+            if background:
+                self._spectrum_background = netobtain(
+                    self._spectrometer_device.recordSpectrum())
+            else:
+                self._spectrum_data = netobtain(
+                    self._spectrometer_device.recordSpectrum())
 
-        self._calculate_corrected_spectrum()
+            self._calculate_corrected_spectrum()
 
-        # Clearing the differential spectra data arrays so that they do not get
-        # saved with this single spectrum.
-        self.diff_spec_data_mod_on = np.array([])
-        self.diff_spec_data_mod_off = np.array([])
+            # Clearing the differential spectra data arrays so that they do not get
+            # saved with this single spectrum.
+            self.diff_spec_data_mod_on = np.array([])
+            self.diff_spec_data_mod_off = np.array([])
 
-        self.sig_specdata_updated.emit()
+            self.sig_specdata_updated.emit()
 
     def _calculate_corrected_spectrum(self):
         self._spectrum_data_corrected = np.copy(self._spectrum_data)

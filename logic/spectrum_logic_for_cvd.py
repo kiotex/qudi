@@ -193,71 +193,89 @@ class SpectrumLogic(GenericLogic):
         """Start a differential spectrum acquisition.  An initial spectrum is recorded to initialise the data arrays to the right size.
         """
 
-        self._continue_differential = True
+        with self.threadlock:
+            # Lock module
+            if self.module_state() != 'locked':
+                self.module_state.lock()
+            else:
+                self.log.warning('Differential spectrum already running. Method call ignored.')
+                return 0
 
-        # Taking a demo spectrum gives us the wavelength values and the length
-        # of the spectrum data.
-        demo_data = netobtain(self._spectrometer_device.recordSpectrum())
+            self.stopRequested = False
 
-        wavelengths = demo_data[0, :]
-        empty_signal = np.zeros(len(wavelengths))
+            # Taking a demo spectrum gives us the wavelength values and the length
+            # of the spectrum data.
+            demo_data = netobtain(self._spectrometer_device.recordSpectrum())
 
-        # Using this information to initialise the differential spectrum data
-        # arrays.
-        self._spectrum_data = np.array([wavelengths, empty_signal])
-        self.diff_spec_data_mod_on = np.array([wavelengths, empty_signal])
-        self.diff_spec_data_mod_off = np.array([wavelengths, empty_signal])
-        self.repetition_count = 0
+            wavelengths = demo_data[0, :]
+            empty_signal = np.zeros(len(wavelengths))
 
-        # Starting the measurement loop
-        self._loop_differential_spectrum()
+            # Using this information to initialise the differential spectrum data
+            # arrays.
+            self._spectrum_data = np.array([wavelengths, empty_signal])
+            self.diff_spec_data_mod_on = np.array([wavelengths, empty_signal])
+            self.diff_spec_data_mod_off = np.array([wavelengths, empty_signal])
+            self.repetition_count = 0
+
+            # Starting the measurement loop
+            # self._loop_differential_spectrum()
+            self.sig_next_diff_loop.emit()
 
     def resume_differential_spectrum(self):
         """Resume a differential spectrum acquisition.
         """
+        if self.module_state() != 'locked':
+            with self.threadlock:
+                self.stopRequested = False
+                self.module_state.lock()
 
-        self._continue_differential = True
+                # Starting the measurement loop
+                # self._loop_differential_spectrum()
+                self.sig_next_diff_loop.emit()
 
-        # Starting the measurement loop
-        self._loop_differential_spectrum()
-
-    def _loop_differential_spectrum(self):
-        """ This loop toggles the modulation and iteratively records a differential spectrum.
-        """
-
-        # If the loop should not continue, then return immediately without
-        # emitting any signal to repeat.
-        if not self._continue_differential:
-            return
-
-        # Otherwise, we make a measurement and then emit a signal to repeat
-        # this loop.
-
-        # Toggle on, take spectrum and add data to the mod_on data
-        self.toggle_modulation(on=True)
-        these_data = netobtain(self._spectrometer_device.recordSpectrum())
-        self.diff_spec_data_mod_on[1, :] += these_data[1, :]
-
-        # Toggle off, take spectrum and add data to the mod_off data
-        self.toggle_modulation(on=False)
-        these_data = netobtain(self._spectrometer_device.recordSpectrum())
-        self.diff_spec_data_mod_off[1, :] += these_data[1, :]
-
-        self.repetition_count += 1    # increment the loop count
-
-        # Calculate the differential spectrum
-        self._spectrum_data[1, :] = self.diff_spec_data_mod_on[
-            1, :] - self.diff_spec_data_mod_off[1, :]
-
-        self.sig_specdata_updated.emit()
-
-        self.sig_next_diff_loop.emit()
 
     def stop_differential_spectrum(self):
         """Stop an ongoing differential spectrum acquisition
         """
+        if self.module_state() == 'locked':
+            with self.threadlock:
+                self.stopRequested = True
 
-        self._continue_differential = False
+    def _loop_differential_spectrum(self):
+        """ This loop toggles the modulation and iteratively records a differential spectrum.
+        """
+        if self.module_state() == 'locked':
+            with self.threadlock:
+
+                # If the loop should not continue, then return immediately without
+                # emitting any signal to repeat.
+                if self.stopRequested:
+                    self.stopRequested = False
+                    self.module_state.unlock()
+                    self.sig_specdata_updated.emit()
+                    return
+
+                # Otherwise, we make a measurement and then emit a signal to repeat
+                # this loop.
+
+                # Toggle on, take spectrum and add data to the mod_on data
+                self.toggle_modulation(on=True)
+                these_data = netobtain(self._spectrometer_device.recordSpectrum())
+                self.diff_spec_data_mod_on[1, :] += these_data[1, :]
+
+                # Toggle off, take spectrum and add data to the mod_off data
+                self.toggle_modulation(on=False)
+                these_data = netobtain(self._spectrometer_device.recordSpectrum())
+                self.diff_spec_data_mod_off[1, :] += these_data[1, :]
+
+                self.repetition_count += 1    # increment the loop count
+
+                # Calculate the differential spectrum
+                self._spectrum_data[1, :] = self.diff_spec_data_mod_on[
+                    1, :] - self.diff_spec_data_mod_off[1, :]
+
+            self.sig_specdata_updated.emit()
+            self.sig_next_diff_loop.emit()
 
     def toggle_modulation(self, on):
         """ Toggle the modulation.

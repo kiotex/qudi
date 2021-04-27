@@ -22,7 +22,7 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 import numpy as np
 
 import visa
-from hardware.multimeter.Keithlay_DMM6500 import DMM6500
+from hardware.multimeter.Keithley_DMM6500_VISA_Driver import DMM6500
 
 from core.module import Base
 from core.configoption import ConfigOption
@@ -37,8 +37,8 @@ class Keithlay_DMM6500(
     The hardware file was tested using the model Keithlay DMM6500.
 
     Keithlay_DMM6500:
-        module.Class: 'Keithlay_DMM6500.Keithlay_DMM6500'
-        visa_address: 'USB0::0x0957::0x0607::my47019114::0::INSTR'
+        module.Class: 'multimeter.Keithlay_DMM6500.Keithlay_DMM6500'
+        visa_address: 'USB0::0x05E6::0x6500::04464881::INSTR'
         visa_timeout: 100 # in seconds
         measurement_mode: 'dc_current' #'dc_voltage'
     """
@@ -109,7 +109,7 @@ class Keithlay_DMM6500(
 
             @return float: process value
         """
-        return self.dmm6500.Measure(1)
+        return float(self.dmm6500.Measure(1))
     # ================ End ProcessInterface Commands ==================
 
     # ================ For SlowCounterInterface Commands =====================

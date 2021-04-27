@@ -102,7 +102,7 @@ class Agilent3441XA(
 
             @return float: process value
         """
-        return self._usb_connection.query('READ?')
+        return float(self._usb_connection.query('READ?'))
 
     # ================ End ProcessInterface Commands ==================
 

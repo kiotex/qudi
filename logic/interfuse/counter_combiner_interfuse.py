@@ -96,7 +96,7 @@ class CounterCombinerInterfuse(
         ret = list()
 
         for counter in self.counters:
-            ret += counter.get_counter_channels()
+            ret.append(counter.get_counter_channels())
 
         return ret
 

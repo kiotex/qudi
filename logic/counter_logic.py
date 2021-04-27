@@ -469,18 +469,19 @@ class CounterLogic(GenericLogic):
 
                 # read the current counter value
                 self.rawdata = self._counting_device.get_counter(samples=self._counting_samples)
-                if self.rawdata[0, 0] < 0:
-                    self.log.error('The counting went wrong, killing the counter.')
-                    self.stopRequested = True
+
+                # if self.rawdata[0, 0] < 0:
+                    # self.log.error('The counting went wrong, killing the counter.')
+                    # self.stopRequested = True
+
+                if self._counting_mode == CountingMode['CONTINUOUS']:
+                    self._process_data_continous()
+                elif self._counting_mode == CountingMode['GATED']:
+                    self._process_data_gated()
+                elif self._counting_mode == CountingMode['FINITE_GATED']:
+                    self._process_data_finite_gated()
                 else:
-                    if self._counting_mode == CountingMode['CONTINUOUS']:
-                        self._process_data_continous()
-                    elif self._counting_mode == CountingMode['GATED']:
-                        self._process_data_gated()
-                    elif self._counting_mode == CountingMode['FINITE_GATED']:
-                        self._process_data_finite_gated()
-                    else:
-                        self.log.error('No valid counting mode set! Can not process counter data.')
+                    self.log.error('No valid counting mode set! Can not process counter data.')
 
             # call this again from event loop
             self.sigCounterUpdated.emit()
@@ -558,6 +559,7 @@ class CounterLogic(GenericLogic):
             self.countdata[i, 0] = np.average(self.rawdata[i])
         # move the array to the left to make space for the new data
         self.countdata = np.roll(self.countdata, -1, axis=1)
+        """
         # also move the smoothing array
         self.countdata_smoothed = np.roll(self.countdata_smoothed, -1, axis=1)
         # calculate the median and save it
@@ -565,6 +567,7 @@ class CounterLogic(GenericLogic):
         for i, ch in enumerate(self.get_channels()):
             self.countdata_smoothed[i, window:] = np.median(self.countdata[i,
                                                             -self._smooth_window_length:])
+        """
 
         # save the data if necessary
         if self._saving:

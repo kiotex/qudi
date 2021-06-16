@@ -32,8 +32,9 @@ from core.util.network import netobtain
 from logic.generic_logic import GenericLogic
 
 class Mode(Enum):
-    Differential = 0
-    Continuous = 1
+    Single = 0
+    Differential = 1
+    Continuous = 2
 
 class SpectrumLogic(GenericLogic):
 

@@ -63,6 +63,10 @@ class DIY_DAQ(Base, ProcessInterface, ProcessControlInterface):
         self.max113xx = MAX113XX(self._ftdi_interface,
                                  self._ccp_header_file)
 
+        is_ok = (DIY_DAQ.max113xx.readRegister(0x00) !=0x000)
+        if not is_ok:
+            self.log.error("MAX113XX has no power")
+
     def on_deactivate(self):
         """ Deactivate module.
         """

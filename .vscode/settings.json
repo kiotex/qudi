@@ -18,5 +18,6 @@
     "jupyter.jupyterServerType": "local",
     "jupyter.jupyterCommandLineArguments": [
         "--generate-config"
-    ]
+    ],
+    "python.analysis.completeFunctionParens": true
 }

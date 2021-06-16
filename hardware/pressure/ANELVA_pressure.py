@@ -65,7 +65,7 @@ class M601GC(Base, ProcessInterface):
         if not(self._openflag):
             self._serial_connection.open()
 
-        self.gaugetype = self._send_cmd(b'$TID\r').strip('$ \r')
+        self.gaugetype = self.get_gaugetype()
         self.log.info('Gauge type: {0}'.format(self.gaugetype))
 
         self.start_reading_process_value(refresh_rate=1)
@@ -73,7 +73,11 @@ class M601GC(Base, ProcessInterface):
     def on_deactivate(self):
         """ Deactivate module.
         """
+        self.get_gaugetype()
         self._serial_connection.close()
+
+    def get_gaugetype(self):
+        return self._send_cmd(b'$TID\r').strip('$ \r')
 
     def get_name(self):
         return self.gaugetype
@@ -127,7 +131,7 @@ class M601GC(Base, ProcessInterface):
             self._serial_connection.reset_output_buffer()
 
         if self._serial_connection.in_waiting > 0:
-            self._serial_connection.reset_in_buffer()
+            self._serial_connection.reset_input_buffer()
 
         self._serial_connection.write(cmd)
         res = self._read_data()

@@ -112,5 +112,5 @@ class Agilent3441XA(
         @return tuple(str): channel names
         Most methods calling this might just care about the number of channels, though.
         """
-        return self._measurement_mode
+        return [self._measurement_mode]
     # ================ End SlowCounterInterface Commands ==================
